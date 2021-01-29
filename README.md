@@ -107,3 +107,12 @@ RSA traits are displayed in the summary window. Open the summary window using **
 ## Algorithm Extensions
 
 The interpolation methods, trait measurements, and other functions are extensible by users. Additionally, their codes are stored in **mod/Interpolation**, **mod/Traits**, and **mod/Extensions**, respectively. Copy, rename, and edit **\__templete__.py** to implement the code. The implementation examples are stored in these directories.
+
+## Update history
+
+* version 1.0 (Jan 6th, 2020)
+  * Initial version uploaded
+* version 1.1 (d)
+  * mod - traits updated
+  * mod - traits debug function installed
+  
