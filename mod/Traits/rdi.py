@@ -1,7 +1,14 @@
+#// a module of RSAtrace3D for calculating RDI
 
-from .__backbone__ import RSATraitBackbone
-from DATA import RSA_Vector
+import os, sys
 from statistics import mean
+
+if __name__ == '__main__':
+    sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
+
+from mod.Traits.__backbone__ import RSATraitBackbone
+from mod.Traits.__test__ import ModuleTest
+from DATA import RSA_Vector
 
 #// [RDI] root distribution index
 class RSA_RDI(RSATraitBackbone):
@@ -43,3 +50,6 @@ class RSA_RDI(RSATraitBackbone):
             return f'{self.value:.2f}'
         else:
             return super().str_value()
+
+if __name__ == '__main__':
+    ModuleTest(RSA_RDI)

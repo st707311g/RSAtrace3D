@@ -3,6 +3,7 @@ from DATA import RSA_Vector, ID_Object
 import config
 
 class RootTraitBackbone(object):
+    class_type = "root"
     built_in = False
     label = 'Label name'
     sublabels = []
@@ -42,6 +43,7 @@ class RootTraitBackbone(object):
                 raise Exception(f'The "index" should be >= 0 and <= 255. (class name: {cls.__name__})')
 
 class RSATraitBackbone(object):
+    class_type = "RSA"
     built_in = False
     label = 'Label name'
     sublabels = []

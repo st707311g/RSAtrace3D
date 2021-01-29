@@ -1,4 +1,12 @@
-from .__backbone__ import RootTraitBackbone, RSATraitBackbone
+#// a module of RSAtrace3D for calculating root length
+
+import os, sys
+
+if __name__ == '__main__':
+    sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
+
+from mod.Traits.__backbone__ import RootTraitBackbone, RSATraitBackbone
+from mod.Traits.__test__ import ModuleTest
 from DATA import RSA_Vector, ID_Object
 import math
 
@@ -47,7 +55,7 @@ class Root_Length(RootTraitBackbone):
         return total_diff*resolution/10
 
 #// [RSA] total root length
-class TotalRootLength(RSATraitBackbone):
+class RSA_TotalRootLength(RSATraitBackbone):
     built_in = False
     label = 'length [cm]'
     tool_tip = 'Total root length of single root.'
@@ -70,3 +78,7 @@ class TotalRootLength(RSATraitBackbone):
             return f'{self.value:.2f}'
         else:
             return super().str_value()
+
+if __name__ == '__main__':
+    ModuleTest(Root_Length)
+    ModuleTest(RSA_TotalRootLength)

@@ -1,8 +1,16 @@
-from .__backbone__ import RootTraitBackbone
+#// a module of RSAtrace3D for showing node coordinate
+
+import os, sys
+
+if __name__ == '__main__':
+    sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
+
+from mod.Traits.__backbone__ import RootTraitBackbone
+from mod.Traits.__test__ import ModuleTest
 from DATA import RSA_Vector, ID_Object
 
 #// [single root] Clicked position
-class Position(RootTraitBackbone):
+class Root_Position(RootTraitBackbone):
     built_in = True
     label = 'position'
     tool_tip = 'Clicked coordinates of the node.'
@@ -18,3 +26,6 @@ class Position(RootTraitBackbone):
     #// text to be shown
     def str_value(self):
         return '(x:{2}, y:{1}, z:{0})'.format(*self.value) if self.value is not None else ''
+
+if __name__ == '__main__':
+    ModuleTest(Root_Position)

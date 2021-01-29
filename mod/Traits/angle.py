@@ -1,8 +1,15 @@
-from .__backbone__ import RootTraitBackbone, RSATraitBackbone
-from DATA import RSA_Vector, ID_Object
+#// a module of RSAtrace3D for calculating root growth angle
 
+import os, sys
 from statistics import mean, stdev
 import math
+
+if __name__ == '__main__':
+    sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
+
+from mod.Traits.__backbone__ import RootTraitBackbone, RSATraitBackbone
+from mod.Traits.__test__ import ModuleTest
+from DATA import RSA_Vector, ID_Object
 
 #// [single root] root angle calculation
 class Root_Angle(RootTraitBackbone):
@@ -86,4 +93,8 @@ class RSA_RootAngle(RSATraitBackbone):
             return f'{self.value[0]:.2f}'
         #// with both
         else:
-            return f'{self.value[0]:.2f} ± {self.value[1]:.2f}'
+            return f'{self.value[0]:.2f} \u00b1 {self.value[1]:.2f}'
+
+if __name__ == '__main__':
+    ModuleTest(Root_Angle)
+    ModuleTest(RSA_RootAngle)
