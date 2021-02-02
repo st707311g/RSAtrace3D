@@ -1,4 +1,4 @@
-from PyQt5.QtGui import QStandardItem
+from PyQt5.QtGui import QStandardItem, QFont
 from DATA import RSA_Vector, ID_Object
 import config
 
@@ -34,6 +34,12 @@ class RootTraitBackbone(object):
     def QStandardItem(self):
         self.item = QStandardItem(self.str_value())
         self.item.setData(self)
+
+        font = self.item.font()
+        font.setFamily('Monospace')
+        font.setStyleHint(QFont.Monospace)
+        self.item.setFont(font)
+        
         return self.item
 
     @classmethod
@@ -74,6 +80,12 @@ class RSATraitBackbone(object):
         self.item = QStandardItem(self.str_value())
         self.item.setData(self)
         self.item.setEditable(False)
+
+        font = self.item.font()
+        font.setFamily('Monospace')
+        font.setStyleHint(QFont.Monospace)
+        self.item.setFont(font)
+
         return self.item
 
     @classmethod

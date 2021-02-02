@@ -25,7 +25,7 @@ class Root_Position(RootTraitBackbone):
 
     #// text to be shown
     def str_value(self):
-        return '(x:{2}, y:{1}, z:{0})'.format(*self.value) if self.value is not None else ''
+        return '(x:{2:3}, y:{1:3}, z:{0:3})'.format(*self.value) if self.value is not None else ''
 
 if __name__ == '__main__':
     ModuleTest(Root_Position)

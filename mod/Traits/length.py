@@ -26,7 +26,7 @@ class Root_Length(RootTraitBackbone):
         resolution = RSA_vector.annotations.resolution() #// voxel resolution
         length = self.__calc_length(RSA_vector, ID_string, resolution)
         if length is not None:
-            return length
+            return round(length, 2)
         else:
             return ""
 
@@ -34,7 +34,7 @@ class Root_Length(RootTraitBackbone):
     def str_value(self):
         #// displayed to the second decimal place
         if type(self.value) is float:
-            return f'{self.value:.2f}'
+            return f'{self.value:5.1f}'
         else:
             return super().str_value()
 
@@ -75,7 +75,7 @@ class RSA_TotalRootLength(RSATraitBackbone):
     def str_value(self):
         #// displayed to the second decimal place
         if type(self.value) is float:
-            return f'{self.value:.2f}'
+            return f'{self.value:5.1f}'
         else:
             return super().str_value()
 

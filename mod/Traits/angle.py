@@ -31,14 +31,14 @@ class Root_Angle(RootTraitBackbone):
             return ""
 
         #// angle calculated
-        angle = self.__calc_angle(polyline[0], polyline[-1])
+        angle = round(self.__calc_angle(polyline[0], polyline[-1]), 2)
         return angle
 
     #// text to be shown
     def str_value(self):
         #// displayed to the second decimal place
         if type(self.value) is float:
-            return f'{self.value:.2f}'
+            return f'{self.value:4.1f}'
         else:
             return super().str_value()
 
@@ -74,10 +74,10 @@ class RSA_RootAngle(RSATraitBackbone):
             return [None, None]
 
         ret = []
-        ret.append(mean(root_angle_list))
+        ret.append(round(mean(root_angle_list), 2))
 
         if len(root_angle_list) >= 3:
-            ret.append(stdev(root_angle_list))
+            ret.append(round(stdev(root_angle_list), 2))
         else:
             ret.append(None)
         
@@ -93,7 +93,7 @@ class RSA_RootAngle(RSATraitBackbone):
             return f'{self.value[0]:.2f}'
         #// with both
         else:
-            return f'{self.value[0]:.2f} \u00b1 {self.value[1]:.2f}'
+            return f'{self.value[0]:4.1f} \u00b1 {self.value[1]:4.1f}'
 
 if __name__ == '__main__':
     ModuleTest(Root_Angle)
