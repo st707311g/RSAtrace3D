@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QWidget, QGridLayout
-from pyqtgraph import  ViewBox, ImageItem, mkColor
+from pyqtgraph import  ViewBox, ImageItem, mkColor, InfiniteLine
 from pyqtgraph.widgets.GraphicsLayoutWidget import GraphicsLayoutWidget
 from PyQt5.QtCore import pyqtSignal, Qt
 
@@ -79,7 +79,10 @@ class MainViewWidget(CoreViewWidget):
 
     def make_viewbox(self):
         self.view = MainViewBox(identifier=self.identifier)
+        self.infinite_line = InfiniteLine(angle=0, movable=True)
+        self.infinite_line.hide()
         self.addItem(self.view)
+        self.view.addItem(self.infinite_line)
 
 class SubViewWidget(CoreViewWidget):
     def __init__(self, **kwargs):
@@ -118,6 +121,8 @@ class QtProjectionView(QWidget):
         for w in self.all_widgets():
             w.view.pyqtSignal_mouseClickEvent.connect(self.on_mouse_clicked)
 
+        self.main_view_widget.infinite_line.sigDragged.connect(self.on_infinite_line_pos_changed)
+
     def all_widgets(self):
         return [self.main_view_widget]+self.sub_view_widgets
 
@@ -154,7 +159,12 @@ class QtProjectionView(QWidget):
         img = view.selected_trace_image.image
         if img is not None:
             self.main_view_widget.set_selected_trace_image(img=img.transpose(1,0,2))
-            
+            if self.current_view_index != 0:
+                self.main_view_widget.infinite_line.show()
+            else:
+                self.main_view_widget.infinite_line.hide()
+        else:
+            self.main_view_widget.infinite_line.hide()
 
         self.main_view_widget.view.autoRange()
 
@@ -199,6 +209,7 @@ class QtProjectionView(QWidget):
         self.main_view_widget.clear_all()
         for i in range(3):
             self.sub_view_widgets[i].clear_all()
+        self.main_view_widget.infinite_line.hide()
 
     def set_volume(self, volume):
         if volume is None:
@@ -212,6 +223,7 @@ class QtProjectionView(QWidget):
         self.update_main_widget()
 
         self.volume_shape = volume.shape
+        self.main_view_widget.infinite_line.setBounds((0, self.volume_shape[0]))
 
     def set_trace(self, projections):
         for i in range(3):
@@ -257,3 +269,12 @@ class QtProjectionView(QWidget):
                 w.view.trace_image.hide()
             else:
                 w.view.trace_image.show()
+
+    def on_showing_slice_changed(self, index: int):
+        if self.main_view_widget.infinite_line.pos().y() != index:
+            self.main_view_widget.infinite_line.setPos(index)
+    
+    def on_infinite_line_pos_changed(self, infinite_line: InfiniteLine):
+        z_pos = int(infinite_line.pos().y())
+        self.GUI_components().sliceview.timeLine.setPos(z_pos)
+        #print(z_pos)
