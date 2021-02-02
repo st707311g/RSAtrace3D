@@ -116,5 +116,5 @@ The interpolation methods, trait measurements, and other functions are extensibl
   * update: mod - traits
   * install: mod - traits debug function
   * install: projection view slice line
-  * fix - behavior when the spacebar is pressed
+  * fix: behavior when the spacebar is pressed
   
