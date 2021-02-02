@@ -261,6 +261,9 @@ class QtMain(QMainWindow):
             else:
                 self.show_default_msg_in_statusbar()
             return True
+        elif ev.type()==QEvent.WindowDeactivate:
+                self.set_spacekey(pressed=False)
+                return super().event(ev)
         else:
             return super().event(ev)
 
