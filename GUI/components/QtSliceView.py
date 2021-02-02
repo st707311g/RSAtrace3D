@@ -21,9 +21,6 @@ class _ImageItem3D(ImageItem):
         return super().getHistogram(bins=64, **kwds)
 
 class QtSliceView(ImageView):
-    pyqtSignal_showing_slice_changed = pyqtSignal(int)
-    pyqtSignal_mouse_moved = pyqtSignal(object)
-
     def __init__(self, parent):
         super().__init__(**{'parent':parent, 'view':_ImageViewBox(), 'imageItem':_ImageItem3D()})
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -79,6 +76,7 @@ class QtSliceView(ImageView):
         if trace3d is not None:
             self.update_trace3D(trace3d=trace3d)
         self.update_statusbar(z=self.currentIndex)
+        self.GUI_components().projectionview.on_showing_slice_changed(index=self.currentIndex)
 
     def update_statusbar(self, **kwargs):
         self.GUI_components().statusbar.update_mouse_position(**kwargs)
@@ -186,10 +184,6 @@ class QtSliceView(ImageView):
 
         index = max(self.currentIndex-1,0) if ev.delta()>0 else min(self.currentIndex+1, self.getProcessedImage().shape[0]-1)
         self.setCurrentIndex(index)
-
-    def on_mouse_move_event(self, coordinate):
-        coordinate = self.image_view.view.mapToView(coordinate)
-        self.pyqtSignal_mouse_moved.emit(coordinate)
 
     def update_trace3D(self, trace3d: TraceObject):
         trace_slice = trace3d.volume[self.currentIndex].transpose(1,0,2)
