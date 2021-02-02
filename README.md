@@ -111,8 +111,10 @@ The interpolation methods, trait measurements, and other functions are extensibl
 ## Update history
 
 * version 1.0 (Jan 6th, 2020)
-  * Initial version uploaded
+  * initial version uploaded
 * version 1.1 (d)
-  * mod - traits updated
-  * mod - traits debug function installed
+  * update: mod - traits
+  * install: mod - traits debug function
+  * install: projection view slice line
+  * fix - behavior when the spacebar is pressed
   

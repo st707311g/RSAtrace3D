@@ -3,7 +3,7 @@ from .history import History
 
 application_name = 'RSAtrace3D'
 version = 1
-revision = 0
+revision = 1
 
 def version_string():
     return f'{version}.{revision}'
