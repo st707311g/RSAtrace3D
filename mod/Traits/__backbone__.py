@@ -27,6 +27,8 @@ class RootTraitBackbone(object):
             self.item.setText(self.str_value())
 
     def str_value(self):
+        if self.value is None:
+            return ""
         return str(self.value)
 
     def QStandardItem(self):
