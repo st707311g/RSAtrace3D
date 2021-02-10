@@ -129,22 +129,10 @@ class QtMenubar(QMenuBar):
         self.parent().close_volume()
 
     def on_act_save_rinfo(self):
-        save_dict = self.RSA_components().vector.dictionary()
-        fname = self.RSA_components().file.rinfo_file
+        RSA_vector = self.RSA_components().vector
+        rinfo_file_name = self.RSA_components().file.rinfo_file
 
-        class encoder(json.JSONEncoder):
-            def default(self, obj):
-                if isinstance(obj, np.integer):
-                    return int(obj)
-                elif isinstance(obj, np.ndarray):
-                    return obj.tolist()
-                else:
-                    return super().default(obj)
-
-        with open(fname, 'w') as j:
-            json.dump(save_dict, j, cls=encoder)
-
-        self.logger.info(f'[Saving succeeded] {fname}')
+        RSA_vector.save(rinfo_file_name)
 
     def on_act_export_root_csv(self):
         try:

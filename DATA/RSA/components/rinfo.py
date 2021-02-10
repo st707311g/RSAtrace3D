@@ -463,6 +463,27 @@ class RSA_Vector(Node):
             self.logger.error(f'[Format error] {file}')
             return False
 
+    def save(self, rinfo_file_name: str):
+        assert os.path.isfile(rinfo_file_name)
+
+        class encoder(json.JSONEncoder):
+            def default(self, obj):
+                if isinstance(obj, np.integer):
+                    return int(obj)
+                elif isinstance(obj, np.ndarray):
+                    return obj.tolist()
+                else:
+                    return super().default(obj)
+
+        try:
+            with open(rinfo_file_name, 'w') as j:
+                json.dump(self.dictionary(), j, cls=encoder)
+            self.logger.info(f'[Saving succeeded] {rinfo_file_name}')
+            return True
+        except:
+            self.logger.error(f'[Saving failed] {rinfo_file_name}')
+            return False
+
     def iter_all(self) -> Generator[ID_Object, None, None]:
         for base_node in self:
             yield base_node.ID_string()
