@@ -464,8 +464,6 @@ class RSA_Vector(Node):
             return False
 
     def save(self, rinfo_file_name: str):
-        assert os.path.isfile(rinfo_file_name)
-
         class encoder(json.JSONEncoder):
             def default(self, obj):
                 if isinstance(obj, np.integer):

@@ -108,6 +108,7 @@ class QtSliceView(ImageView):
             else:
                 self.add_root(annotations=annotations)
 
+            self.GUI_components().treeview.update_all_text()
             self.parent().set_control(locked=False)
             self.parent().show_default_msg_in_statusbar()
 

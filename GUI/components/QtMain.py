@@ -200,6 +200,9 @@ class QtMain(QMainWindow):
             else:
                 treeview.add_relay(ID_string=ID_string)
 
+        self.set_volume_name(volume_name=RSA_vector.annotations.volume_name())
+        self.set_resolution(resolution=RSA_vector.annotations.resolution())
+
         self.GUI_components().sliceview.update_trace_graphics()
 
         return True
