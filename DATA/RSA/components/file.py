@@ -18,7 +18,7 @@ class File(object):
         self.volume = os.path.basename(self.directory)
 
         self.img_files = [os.path.join(self.directory, f) for f in os.listdir(self.directory)]
-        self.img_files = [f for f in self.img_files if os.path.isfile(f) and f.lower().endswith(('.png', '.tif', '.tiff'))]
+        self.img_files = [f for f in self.img_files if os.path.isfile(f) and f.lower().endswith(('.png', '.tif', '.tiff', '.jpg', '.jpeg'))]
         self.img_files.sort()
 
     def is_rinfo_file_available(self):
