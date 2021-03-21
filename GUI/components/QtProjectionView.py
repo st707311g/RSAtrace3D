@@ -159,10 +159,8 @@ class QtProjectionView(QWidget):
         img = view.selected_trace_image.image
         if img is not None:
             self.main_view_widget.set_selected_trace_image(img=img.transpose(1,0,2))
-            if self.current_view_index != 0:
-                self.main_view_widget.infinite_line.show()
-            else:
-                self.main_view_widget.infinite_line.hide()
+        if self.current_view_index != 0:
+            self.main_view_widget.infinite_line.show()
         else:
             self.main_view_widget.infinite_line.hide()
 

@@ -315,7 +315,9 @@ class QtTreeView(QTreeView):
                     for ID_string, item in zip(ID_iter, item_iter):
                         ID_string = ID_Object(ID_string)
                         if ID_string.is_root():
-                            data.append(item.data().value[i])
+                            v = item.data().value
+                            v = v[i] if v is not None else ""
+                            data.append(v)
 
                     column_data.append(data)
 
