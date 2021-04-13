@@ -1,10 +1,12 @@
 from PyQt5.QtWidgets import QMenu, QAction
 import os, json, config
+import logging
 
 class History():
     def __init__(self, max_count, menu_label):
         self.max_count = max_count
         self.menu = QMenu(menu_label)
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.clear()
     
     def clear(self):
@@ -52,12 +54,17 @@ class History():
             return False
 
         self.clear()
-        with open(src, 'r') as f:
-            dict_ = json.load(f)
-            for v in dict_.values():
-                self.add(v)
 
-        return True
+        try:
+            with open(src, 'r') as f:
+                dict_ = json.load(f)
+                for v in dict_.values():
+                    self.add(v)
+
+            return True
+        except:
+            self.logger.error("[loading failed] History file could not be loaded. The history data has been cleared.")
+            return False
 
     def build_menu(self, parent, triggered):
         self.parent = parent
