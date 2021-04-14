@@ -1,11 +1,16 @@
 from inspect import getmembers, isclass
 from PyQt5.QtWidgets import QMenu, QActionGroup, QAction
 from importlib import import_module
-import os, logging
+import os, sys, logging
+import glob
 
-from .Traits.__backbone__ import RootTraitBackbone, RSATraitBackbone
-from .Interpolation.__backbone__ import InterpolationBackbone
-from .Extensions.__backbone__ import ExtensionBackbone
+if __name__ == '__main__':
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+    logging.basicConfig(level=logging.INFO)
+
+from mod.Traits.__backbone__ import RootTraitBackbone, RSATraitBackbone
+from mod.Interpolation.__backbone__ import InterpolationBackbone
+from mod.Extensions.__backbone__ import ExtensionBackbone
 
 class _ClassContainer(list):
     def __init__(self):
@@ -32,29 +37,30 @@ class _ClassContainer(list):
         return [c.exportable for c in self]
 
 class _ClassLoader(object):
-    def __init__(self, backbone, indir, **kwargs):
+    def __init__(self, backbone, **kwargs):
         super().__init__()
         self.logger = logging.getLogger(self.__class__.__name__)
         self.backbone = backbone
-        self.indir = indir
         self.menu = None
         self.class_container = _ClassContainer()
         self.load_files()
 
     def load_files(self):
-        files = os.listdir(os.path.join(os.path.dirname(__file__), self.indir))
-        files = [f for f in files if f.endswith('.py') and not f.startswith('__')]
+        files = glob.glob(pathname='mod/**/*.py', recursive=True)
+        files = [f for f in files if not os.path.basename(f).startswith('_')]
         files.sort()
 
         for f in files:
-            m_name, _ = os.path.splitext(f)
-            m_path = f'.{self.indir}.{m_name}'
-            module = import_module(m_path, self.__module__)
+            try:
+                m_path, _ = os.path.splitext(f)
+                module = import_module(m_path.replace('/', '.'), self.__module__)
 
-            class_list = list(getmembers(module,lambda x:issubclass(x, self.backbone) if isclass(x) else False))
-            for class_name, class_instance in class_list:
-                if class_instance != self.backbone:
-                    self.class_container.append(class_instance)
+                class_list = list(getmembers(module,lambda x:issubclass(x, self.backbone) if isclass(x) else False))
+                for _, class_instance in class_list:
+                    if class_instance != self.backbone:
+                        self.class_container.append(class_instance)
+            except:
+                self.logger.error(f'An unexpected error occurred while importing the module: {f}')
 
         self.class_container.sort()
 
@@ -108,19 +114,19 @@ class _ClassLoader(object):
 
 class RootTraits(_ClassLoader):
     def __init__(self, **kwargs):
-        super().__init__(backbone=RootTraitBackbone, indir='Traits')
+        super().__init__(backbone=RootTraitBackbone)
         
 class RSATraits(_ClassLoader):
     def __init__(self, **kwargs):
-        super().__init__(backbone=RSATraitBackbone, indir='Traits')
+        super().__init__(backbone=RSATraitBackbone)
 
 class Interpolation(_ClassLoader):
     def __init__(self, **kwargs):
-        super().__init__(backbone=InterpolationBackbone, indir='Interpolation')
+        super().__init__(backbone=InterpolationBackbone)
 
 class Extensions(_ClassLoader):
     def __init__(self, parent, **kwargs):
-        super().__init__(backbone=ExtensionBackbone, indir='Extensions')
+        super().__init__(backbone=ExtensionBackbone)
         self.__parent = parent
         self.windows = {}
 
@@ -138,3 +144,6 @@ class Extensions(_ClassLoader):
         ins.show()
         ins.activateWindow()
 
+
+if __name__ == '__main__':
+    root_traits = RootTraits()

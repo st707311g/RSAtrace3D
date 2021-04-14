@@ -1,2 +1,8 @@
-__pycache__
-.vscode
+__pycache__/
+.vscode/
+mod/*
+!mod/Extensions/
+!mod/Interpolation/
+!mod/Traits/
+!mod/__init__.py
+!mod/__main__.py
