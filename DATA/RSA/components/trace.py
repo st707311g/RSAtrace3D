@@ -25,6 +25,7 @@ class Trace(object):
         self.logger.debug('The trace data cleared.')
 
     def init_from_volume(self, volume):
+        self.clear()
         self.trace3D = TraceObject(shape=volume.shape, dimensions = [0,1,2], pen_size=3)
         for dimensions in [[1,2],[0,2],[0,1]]:
             self.projections.append(TraceObject(shape=volume.shape, dimensions = dimensions, pen_size=3))

@@ -92,6 +92,9 @@ class QtMain(QMainWindow):
         return self.__control_locked
 
     def set_control(self, locked):
+        if self.__control_locked == locked:
+            return
+            
         self.__control_locked=locked
         self.logger.debug(f'Control locked: {self.__control_locked}')
         self.GUI_components().menubar.update()
@@ -265,8 +268,9 @@ class QtMain(QMainWindow):
                 self.show_default_msg_in_statusbar()
             return True
         elif ev.type()==QEvent.WindowDeactivate:
+            if self.is_spacekey_pressed():
                 self.set_spacekey(pressed=False)
-                return super().event(ev)
+            return super().event(ev)
         else:
             return super().event(ev)
 

@@ -1,5 +1,7 @@
+from typing import Dict, List
 from pyqtgraph import ImageView, ImageItem, GraphItem, TextItem, mkPen, mkBrush, IsocurveItem, ViewBox
 from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtGui import QPen, QBrush
 
 from DATA import ID_Object, TraceObject, RSA_Components
 import numpy as np
@@ -64,7 +66,7 @@ class QtSliceView(ImageView):
         ev.ignore()
 
     def on_spacekey_pressed(self, pressed):
-        if pressed == True:
+        if self.RSA_components().volume.is_empty() or pressed == True:
             self.pos_marks.hide()
             self.trace3D.hide()
         else:
@@ -146,10 +148,14 @@ class QtSliceView(ImageView):
         RSA_vector = self.RSA_components().vector
         root_nodes = self.RSA_components().trace.root_ndoes_to_be_updated(RSA_vector=RSA_vector)
 
-        if len(root_nodes) == 1:
+        self.logger.debug(f"Number of root node to be updated: {len(root_nodes)}")
+
+        self.parent().set_control(locked=True)
+        if len(root_nodes) == 0: #// in the case of no nodes
+            self.RSA_components().trace.init_from_volume(self.RSA_components().volume.data)
+        elif len(root_nodes) == 1: #// in the case of adding a node
             self.RSA_components().trace.draw_trace(root_node=root_nodes[0])
         else:
-            self.parent().set_control(locked=True)
             for i, root_node in enumerate(root_nodes):
                 self.GUI_components().statusbar.pyqtSignal_update_progressbar.emit(i, len(root_nodes), 'Redrawing trace volume')
                 self.RSA_components().trace.draw_trace(root_node=root_node)
@@ -157,6 +163,7 @@ class QtSliceView(ImageView):
         trace3d = self.RSA_components().trace.trace3D
         if trace3d is not None:
             self.update_trace3D(trace3d)
+
         self.GUI_components().projectionview.set_trace(projections=self.RSA_components().trace.projections)
 
         self.pos_marks.draw(ID_string=selected_ID_string)
@@ -230,27 +237,58 @@ class PosMarks(GraphItem):
     def GUI_components(self):
         return self.imageview.GUI_components()
 
+    def make_draw_parameter_class(self):
+        class DrawParameterClass(object):
+            def __init__(self):
+                self.__dict = {
+                    'size': 10,
+                    'pxMode': True, 
+                    'antialias': True,
+                    'pos': [],
+                    'symbol': [],
+                    'symbolPen': [],
+                    'symbolBrush': [],
+                    'text': []
+                }
+
+            def to_dict(self):
+                return_dict = self.__dict.copy()
+                return_dict['pos'] = np.asarray(return_dict['pos'])
+
+                return return_dict
+
+            def is_empty(self):
+                return len(self.__dict['pos']) == 0
+
+            def add_node(self, pos: List, symbolPen: QPen, symbolBrush: QBrush, text:str, symbol: str='o'):
+                self.__dict['pos'].append(pos)
+                self.__dict['symbolPen'].append(symbolPen)
+                self.__dict['symbolBrush'].append(symbolBrush)
+                self.__dict['text'].append(text)
+                self.__dict['symbol'].append(symbol)
+
+        return DrawParameterClass()
+
     def draw(self, ID_string: ID_Object=None):
         if ID_string is None or self.RSA_components().volume.is_empty():
-            self.hide()
+            self.data = {}
+            self.setTexts([])
+            self.updateGraph()
             return
 
-        pos = []
-        symbols = []
-        symbolPen = []
-        symbolBrush = []
-        text = []
+        draw_parameters = self.make_draw_parameter_class()
         
-        def add_marks(ID_string, pen, brush):
+        def add_marks(ID_string, pen: QPen, brush: QBrush):
             clicked_coordinate = self.RSA_components().vector[ID_string]['coordinate']
             if clicked_coordinate is None :
                 return
 
-            pos.append([clicked_coordinate[2]+0.5, clicked_coordinate[1]+0.5])
-            symbols.append('o')
-            symbolPen.append(pen)
-            symbolBrush.append(brush)
-            text.append(ID_string)
+            draw_parameters.add_node(
+                pos=[clicked_coordinate[2]+0.5, clicked_coordinate[1]+0.5],
+                symbolPen=pen, 
+                symbolBrush=brush, 
+                text=ID_string
+                )
 
         add_marks(ID_string.to_base(), mkPen((255,0,0)), mkBrush((255, 0, 0, 64)))
 
@@ -259,30 +297,17 @@ class PosMarks(GraphItem):
             relay_ID_strings = root_node.child_ID_strings()
             selected_ID_string = self.GUI_components().treeview.get_selected_ID_string()
 
-            if selected_ID_string in relay_ID_strings:
-                for ID_string in relay_ID_strings:
-                    if ID_string == selected_ID_string:
-                        add_marks(ID_string,mkPen((0,255,0)), mkBrush((0, 255, 0, 64)))
-                    else:
-                        add_marks(ID_string, mkPen((255,0,255)), mkBrush((255, 0, 255, 64)))
-            else:
-                for ID_string in relay_ID_strings:
+            
+            for ID_string in relay_ID_strings:
+                if selected_ID_string not in relay_ID_strings or ID_string == selected_ID_string:
                     add_marks(ID_string,mkPen((0,255,0)), mkBrush((0, 255, 0, 64)))
+                else:
+                    add_marks(ID_string, mkPen((0,128,0)), mkBrush((0, 255, 0, 32)))
 
-        if len(pos) == 0:
+        if draw_parameters.is_empty():
             return
 
-        self.setData(
-            pos=np.asarray(pos), 
-            size=10, 
-            symbol=symbols, 
-            pxMode=True, 
-            symbolPen=symbolPen, 
-            symbolBrush=symbolBrush,
-            text=text,
-            antialias=True
-            )
-
+        self.setData(**draw_parameters.to_dict())
         self.show()
         
     def setData(self, **kwds):
