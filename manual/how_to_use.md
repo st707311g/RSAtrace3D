@@ -1,8 +1,9 @@
 # RSAtrace3D: user's manual
 
-<div style="text-align: right;">Written by Shota Teramoto (NARO)</div>
-
-<div style="text-align: right;">June 3, 2021</div>
+![python](https://img.shields.io/badge/Python->3.6-lightgreen)
+![developed_by](https://img.shields.io/badge/developed%20by-Shota_Teramoto-lightgreen)
+![version](https://img.shields.io/badge/version-1.1-lightgreen)
+![last_updated](https://img.shields.io/badge/last_updated-June_4,_2021-lightgreen)
 
 ## Running program
 
