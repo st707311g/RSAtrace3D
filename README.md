@@ -5,6 +5,8 @@
 ![version](https://img.shields.io/badge/version-1.1-lightgreen)
 ![last_updated](https://img.shields.io/badge/last_updated-June_4,_2021-lightgreen)
 
+![GUI](./figures/RSAtrace3D.jpg) 
+
 ## introduction
 
 RSAtrace3D is a vectorization software to measure RSA (root system architecture) traits of monocot plants from 3D volume data such as X-ray CT images. Traits of  interest could be quantified by installing additional packages that could be freely designed by the users.
