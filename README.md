@@ -64,7 +64,7 @@ RSAtrace3D is dual licensed under the Massachusetts Institute of Technology (MIT
 
 Please cite the following article:
 
-Shota Teramoto et al. RSAtrace3D: robust vectorization software for measuring monocot root system architecture (2021) in press.
+Shota Teramoto et al. RSAtrace3D: robust vectorization software for measuring monocot root system architecture (2021) BMC plant biol. in press.
 
 ## copyright
 
