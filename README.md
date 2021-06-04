@@ -39,6 +39,18 @@ The confirmed operating environment is shown below:
     - pyqtgraph (0.10.0)
     - psutil (5.7.0)
 
+- CPU: Intel<sup>(R)</sup> Core<sup>(TM)</sup> i7-8700 CPU @ 3.20 GHz
+- Memory: 32 GB
+- Ubuntu (18.04.4 LTS)
+- Python (3.8.2)
+    - numpy (1.20.3)
+    - scipy (1.6.3)
+    - scikit-image (0.18.1)
+    - pandas (1.2.4)
+    - PyQt5 (5.14.2)
+    - pyqtgraph (0.12.1)
+    - psutil (5.8.0)
+
 ## installation
 
 Run the following commands:

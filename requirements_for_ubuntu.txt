@@ -1,0 +1,5 @@
+PyQt5 == 5.14.2
+pyqtgraph
+scikit-image
+psutil
+pandas

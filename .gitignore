@@ -1,5 +1,6 @@
 __pycache__/
 .vscode/
+.python-version
 mod/*
 !mod/Extensions/
 !mod/Interpolation/
