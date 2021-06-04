@@ -5,7 +5,7 @@
 ![version](https://img.shields.io/badge/version-1.1-lightgreen)
 ![last_updated](https://img.shields.io/badge/last_updated-June_4,_2021-lightgreen)
 
-## Running program
+## running program
 
 Move to the RSAtrace3D root directory which contains `__main__.py` file, and run the following command:
 ```
@@ -14,13 +14,13 @@ pyhton .
 
 If environment is correctly installed, the main window will appear. 
 
-## Graphical user interface (GUI)
+## graphical user interface (GUI)
 
 The graphical user interface (GUI) of RSAtrace3D comprises the slice, tree, and projection viewers. The slice viewer shows a vertical slice of a volume. The tree viewer shows registered node information such as root traits. The projection viewer shows the projection image of the volume to help users' operation.
 
 ![GUI](./figures/GUI_view_labeled.jpg) 
 
-### Volume importing
+### volume importing
 
 To import a volume data stored in a directory, click `File` -> `Open volume` menu or press `Control+O` to open a dialog window. Indicate the directory you want to open. Alternatively, you can drag and drop the directory into the RSAtrace3D window. After importing, a slice and a projection image are showed in the slice and projection viewers, respectively. The image brightness and contrast are modified using the widget right to the slice viewer. The showing slice is changed by a mouse wheeling or slide placed below the slice viewer. 
 
@@ -28,11 +28,11 @@ The volume name and voxel resolution are respectively shown on the toolbar. They
 
 ![Volume import](./figures/GUI_volume_imported_labeled.jpg) 
 
-### Selecting the interpolation method
+### selecting the interpolation method
 
 Select an interpolation method in `Interpolation` menu. `Straight`, `Spline`, and `COG tracking` are selectable. `Straight` connects the nodes with straight lines. `Spline` connects the nodes with spline line. `COG tracking` connects the nodes by tracking root segments between nodes. If you use the image  of which plant root segments are brightened, `COG tracking` is recommended.
 
-### Node registration
+### node registration
 
 The `base`, `root`, and `relay` nodes are placed by utilizing the keyboard and mouse operations. 
 
@@ -69,7 +69,7 @@ Several data could be saved. The type of data that could be saved and how to sav
 
 All data will be stored in the same location as the directory containing volume data.
 
-### Other technical tips
+### other technical tips
 
 - The node marks on the slice viewer and the unselected root traces on the projection viewer could be hidden while holding down the `spacebar`. 
 - Root of interest could be selected by clicking a node on the slice view or a root trace on the projection view.
@@ -80,14 +80,3 @@ All data will be stored in the same location as the directory containing volume 
 RSA traits are calculated in the summary window that could be opened using `Extensions` -> `RSA summary` menu. A rinfo file could be opened by dropping it on the summary window. Afterward, RSA traits will be automatically calculated and displayed in the table view. The RSA trait data shown in the summary window could be saved using `File` -> `Export RSA traits (csv)` menu.
 
 ![RSA_traits](./figures/GUI_summary_window.jpg) 
-
-## Update history
-
-* version 1.0 (Jan 6th, 2020)
-  * initial version uploaded
-* version 1.1 (d)
-  * update: mod - traits
-  * install: mod - traits debug function
-  * install: projection view slice line
-  * fix: behavior when the spacebar is pressed
-  
