@@ -1,10 +1,9 @@
 # RSAtrace3D: a root system architecture vectorization software for monocot plants
 
-<div style="text-align: right;">version 1.1</div>
-
-<div style="text-align: right;">Written by Shota Teramoto (NARO)</div>
-
-<div style="text-align: right;">June 3, 2021</div>
+![python](https://img.shields.io/badge/Python-3.6-lightblue)
+![developed_by](https://img.shields.io/badge/developed%20by-Shota_Teramoto-lightblue)
+![version](https://img.shields.io/badge/version-1.1-lightblue)
+![last_updated](https://img.shields.io/badge/last_updated-June_4,_2021-lightblue)
 
 ## Introduction
 
