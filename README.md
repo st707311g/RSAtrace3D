@@ -87,7 +87,7 @@ https://rootomics.dna.affrc.go.jp/en/
 
 ## update history
 
-* version 1.0 (Jan 6, 2020)
+* version 1.0 (Jan 6, 2021)
   * initial version uploaded
 * version 1.1 (June 4, 2021)
   * update: mod - traits
