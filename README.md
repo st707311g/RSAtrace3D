@@ -3,7 +3,7 @@
 ![python](https://img.shields.io/badge/Python->3.6-lightgreen)
 ![developed_by](https://img.shields.io/badge/developed%20by-Shota_Teramoto-lightgreen)
 ![version](https://img.shields.io/badge/version-1.1-lightgreen)
-![last_updated](https://img.shields.io/badge/last_update-June_4,_2021-lightgreen)
+![last_updated](https://img.shields.io/badge/last_update-July_15,_2021-lightgreen)
 
 ![GUI](./figures/RSAtrace3D.jpg) 
 
@@ -66,7 +66,7 @@ A manual file is avairable [here](./manual/how_to_use.md).
 
 ## version policy
 
-Version information consists of major and minor versions (major.minor). When the major version increases by one, it is no longer compatible with the original version.When the minor version invreases by one, compatibility will be maintained. Revisions that do not affect functionality, such as bug fixes and design changes, will not affect the version number.
+Version information consists of major and minor versions (major.minor). When the major version increases by one, it is no longer compatible with the original version. When the minor version invreases by one, compatibility will be maintained. Revisions that do not affect functionality, such as bug fixes and design changes, will not affect the version number.
 
 ## license
 
@@ -95,4 +95,5 @@ https://rootomics.dna.affrc.go.jp/en/
   * install: projection view slice line
   * install: manual
   * fix: behavior when the spacebar is pressed
+  * fix: run the program under Windows 10 (July 15, 2021)
   

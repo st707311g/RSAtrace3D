@@ -1,16 +1,20 @@
-from inspect import getmembers, isclass
-from PyQt5.QtWidgets import QMenu, QActionGroup, QAction
-from importlib import import_module
-import os, sys, logging
 import glob
+import logging
+import os
+import sys
+from importlib import import_module
+from inspect import getmembers, isclass
+
+from PyQt5.QtWidgets import QAction, QActionGroup, QMenu
 
 if __name__ == '__main__':
     sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
     logging.basicConfig(level=logging.INFO)
 
-from mod.Traits.__backbone__ import RootTraitBackbone, RSATraitBackbone
-from mod.Interpolation.__backbone__ import InterpolationBackbone
 from mod.Extensions.__backbone__ import ExtensionBackbone
+from mod.Interpolation.__backbone__ import InterpolationBackbone
+from mod.Traits.__backbone__ import RootTraitBackbone, RSATraitBackbone
+
 
 class _ClassContainer(list):
     def __init__(self):
@@ -53,7 +57,8 @@ class _ClassLoader(object):
         for f in files:
             try:
                 m_path, _ = os.path.splitext(f)
-                module = import_module(m_path.replace('/', '.'), self.__module__)
+                m_path = m_path.replace('/', '.').replace('\\', '.')
+                module = import_module(m_path, self.__module__)
 
                 class_list = list(getmembers(module,lambda x:issubclass(x, self.backbone) if isclass(x) else False))
                 for _, class_instance in class_list:
