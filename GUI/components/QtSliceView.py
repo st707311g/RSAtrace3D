@@ -201,15 +201,19 @@ class QtSliceView(ImageView):
 
     def move_position(self, ID_string: ID_Object):
         #// ID_string 分類
+        target_coordinate = None
         if ID_string.is_relay():
             relay_node = self.RSA_components().vector.relay_node(ID_string=ID_string)
-            target_coordinate = relay_node['coordinate']
+            if relay_node is not None:
+                target_coordinate = relay_node['coordinate']
         elif ID_string.is_root():
             root_node = self.RSA_components().vector.root_node(ID_string=ID_string)
-            target_coordinate = root_node.tip_coordinate()
+            if root_node is not None:
+                target_coordinate = root_node.tip_coordinate()
         else:
             base_node = self.RSA_components().vector.base_node(ID_string=ID_string)
-            target_coordinate = base_node['coordinate']
+            if base_node is not None:
+                target_coordinate = base_node['coordinate']
 
         if target_coordinate is not None:
             self.setCurrentIndex(target_coordinate[0])
@@ -299,15 +303,16 @@ class PosMarks(GraphItem):
 
         if not ID_string.is_base():
             root_node = self.RSA_components().vector.root_node(ID_string=ID_string)
-            relay_ID_strings = root_node.child_ID_strings()
-            selected_ID_string = self.GUI_components().treeview.get_selected_ID_string()
+            if root_node is not None:
+                relay_ID_strings = root_node.child_ID_strings()
+                selected_ID_string = self.GUI_components().treeview.get_selected_ID_string()
 
-            
-            for ID_string in relay_ID_strings:
-                if selected_ID_string not in relay_ID_strings or ID_string == selected_ID_string:
-                    add_marks(ID_string,mkPen((0,255,0)), mkBrush((0, 255, 0, 64)))
-                else:
-                    add_marks(ID_string, mkPen((0,128,0)), mkBrush((0, 255, 0, 32)))
+                
+                for ID_string in relay_ID_strings:
+                    if selected_ID_string not in relay_ID_strings or ID_string == selected_ID_string:
+                        add_marks(ID_string,mkPen((0,255,0)), mkBrush((0, 255, 0, 64)))
+                    else:
+                        add_marks(ID_string, mkPen((0,128,0)), mkBrush((0, 255, 0, 32)))
 
         if draw_parameters.is_empty():
             return

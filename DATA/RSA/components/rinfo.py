@@ -356,7 +356,7 @@ class RSA_Vector(Node):
     def base_node_count(self):
         return len(self)
 
-    def base_node(self, baseID: int = 1, ID_string: ID_Object = None) -> BaseNode:
+    def base_node(self, baseID: int = 1, ID_string: ID_Object = None) -> Union[BaseNode, None]:
         if ID_string is not None:
             baseID, rootID, relayID = ID_string.split()
 
@@ -364,35 +364,35 @@ class RSA_Vector(Node):
             if base_node.ID == baseID:
                 return base_node
 
-        raise Exception
+        return None
 
-    def root_node(self, baseID: int = 1, rootID: int = 1, ID_string: ID_Object = None) -> RootNode:
+    def root_node(self, baseID: int = 1, rootID: int = 1, ID_string: ID_Object = None) -> Union[RootNode, None]:
         if ID_string is not None:
             baseID, rootID, relayID = ID_string.split()
 
         base_node = self.base_node(baseID=baseID)
         if base_node is None:
-            raise Exception
+            return None
 
         for root_node in base_node:
             if root_node.ID == rootID:
                 return root_node
 
-        raise Exception
+        return None
 
-    def relay_node(self, baseID: int = 1, rootID: int = 1, relayID: int = 1, ID_string: ID_Object = None) -> RelayNode:
+    def relay_node(self, baseID: int = 1, rootID: int = 1, relayID: int = 1, ID_string: ID_Object = None) -> Union[RelayNode, None]:
         if ID_string is not None:
             baseID, rootID, relayID = ID_string.split()
 
         root_node = self.root_node(ID_string=ID_string)
         if root_node is None:
-            raise Exception
+            return None
 
         for relay_node in root_node:
             if relay_node.ID == relayID:
                 return relay_node
         
-        raise Exception
+        return None
 
     def append_base(self, annotations:dict={}):
         return self.append(annotations=annotations)
@@ -441,7 +441,8 @@ class RSA_Vector(Node):
                 ID_string = ID_Object(base_dict['#annotations']['ID_string'])
                 self.append(annotations=base_dict['#annotations'], baseID=ID_string.baseID())
                 base_node = self.base_node(ID_string=ID_string)
-
+                if base_node is None:
+                    continue
                 rootID_list = sorted([int(k) for k in base_dict.keys() if not k.startswith('#')])
 
                 for rootID in rootID_list:
@@ -449,7 +450,8 @@ class RSA_Vector(Node):
                     ID_string = ID_Object(root_dict['#annotations']['ID_string'])
                     base_node.append(annotations=root_dict['#annotations'], rootID=ID_string.rootID())
                     root_node = self.root_node(ID_string=ID_string)
-
+                    if root_node is None:
+                        continue
                     relayID_list = sorted([int(k) for k in root_dict.keys() if not k.startswith('#')])
 
                     for relayID in relayID_list:
