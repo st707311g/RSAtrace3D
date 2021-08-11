@@ -1,12 +1,14 @@
+import logging
+import weakref
+from copy import deepcopy
+from typing import List
+
+import numpy as np
 from PyQt5.QtGui import QColor
+from skimage.morphology import ball, disk
+
 from .rinfo import ID_Object, RootNode, RSA_Vector
 
-from typing import List
-import numpy as np
-from skimage.morphology import ball, disk
-from copy import deepcopy
-import weakref
-import logging
 
 class Trace(object):
     def __init__(self):
@@ -35,7 +37,8 @@ class Trace(object):
 
         if modified:
             for trace_obj in [self.trace3D]+self.projections:
-                trace_obj.clear()
+                if trace_obj is not None:
+                    trace_obj.clear()
             self.histry = []
 
         base_node = RSA_vector.base_node(baseID=1)
@@ -56,7 +59,8 @@ class Trace(object):
         ID_string = root_node.ID_string()
         completed_polyline = root_node.completed_polyline()
         for trace_obj in [self.trace3D]+self.projections:
-            trace_obj.draw_trace_single(completed_polyline, color=QColor('#8800ff00'))
+            if trace_obj is not None:
+                trace_obj.draw_trace_single(completed_polyline, color=QColor('#8800ff00'))
         self.histry.append([ID_string, weakref.ref(completed_polyline)])
 
     def create_trace_object(self, RSA_vector: RSA_Vector, ID_string: ID_Object, **kwargs):

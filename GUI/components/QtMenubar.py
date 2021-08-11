@@ -1,13 +1,16 @@
-from PyQt5.QtCore import QObject
-from PyQt5.QtWidgets import QMenuBar, QMenu, QAction,QFileDialog, QMessageBox
+import json
+import logging
+import os
 
+import config
+import numpy as np
+from config import History
 from DATA import RSA_Components
 from DATA.RSA.components import file
-import config
-import os, json, logging
-import numpy as np
+from PyQt5.QtCore import QObject
+from PyQt5.QtWidgets import QAction, QFileDialog, QMenu, QMenuBar, QMessageBox
 from skimage import io
-from config import History
+
 
 class QtAction(QAction):
     def __init__(self, *args, **kwargs):
@@ -172,19 +175,19 @@ class QtMenubar(QMenuBar):
         trace_directory = self.RSA_components().file.trace_directory
         try:
             trace_3d = self.RSA_components().trace.trace3D
+            if trace_3d is not None:
+                if os.path.isdir(trace_directory):
+                    self.logger.error(f'[Saving failed] {trace_directory} already exists.')
+                    return
 
-            if os.path.isdir(trace_directory):
-                self.logger.error(f'[Saving failed] {trace_directory} already exists.')
-                return
+                os.mkdir(trace_directory)
 
-            os.mkdir(trace_directory)
+                for i, slice_ in enumerate(trace_3d.volume): 
+                    img_to_be_saved = slice_[..., 1]
+                    img_name = os.path.join(trace_directory, f'img{i:04}.png')
+                    io.imsave(img_name, img_to_be_saved)
 
-            for i, slice_ in enumerate(trace_3d.volume): 
-                img_to_be_saved = slice_[..., 1]
-                img_name = os.path.join(trace_directory, f'img{i:04}.png')
-                io.imsave(img_name, img_to_be_saved)
-
-            self.logger.info(f'[Saving succeeded] {trace_directory}')
+                self.logger.info(f'[Saving succeeded] {trace_directory}')
         except:
             self.logger.error(f'[Saving failed] {trace_directory}')
         

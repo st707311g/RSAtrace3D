@@ -1,14 +1,16 @@
 #// a module of RSAtrace3D for calculating RDI
 
-import os, sys
+import os
+import sys
 from statistics import mean
 
 if __name__ == '__main__':
     sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
+from DATA import RSA_Vector
 from mod.Traits.__backbone__ import RSATraitBackbone
 from mod.Traits.__test__ import ModuleTest
-from DATA import RSA_Vector
+
 
 #// [RDI] root distribution index
 class RSA_RDI(RSATraitBackbone):
@@ -35,7 +37,10 @@ class RSA_RDI(RSATraitBackbone):
         if base_node is None:
             return None
 
-        z_offset = base_node['coordinate'][0] #// 1st: z, 2nd: y, 3rd: x
+        co = base_node['coordinate']
+        if co is None:
+            return None
+        z_offset = co[0] #// 1st: z, 2nd: y, 3rd: x
         resolution = RSA_vector.annotations.resolution() #// voxel resolution
 
         if len(polyline) == 0:

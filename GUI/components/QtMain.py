@@ -1,19 +1,22 @@
-from PyQt5.QtCore import Qt, QThread, QEvent
-from PyQt5.QtWidgets import QApplication, QMainWindow, QSplitter, QMessageBox
+import json
+import logging
+import os
+
+import config
+import numpy as np
+from DATA import File, RSA_Components
+from mod import Extensions, Interpolation, RootTraits, RSATraits
+from PyQt5.QtCore import QEvent, Qt, QThread
+from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QSplitter
+from skimage import io
+
+from .QtMenubar import QtMenubar
+from .QtProjectionView import QtProjectionView
 from .QtSliceView import QtSliceView
 from .QtStatusBar import QtStatusBarW
-from .QtTreeView import QtTreeView
-from .QtProjectionView import QtProjectionView
 from .QtToolbar import QtToolBar
-from .QtMenubar import QtMenubar
+from .QtTreeView import QtTreeView
 
-import numpy as np
-from skimage import io
-import os, logging, json
-
-from mod import RootTraits, RSATraits, Interpolation, Extensions
-from DATA import RSA_Components, File
-import config
 
 class GUI_Components(object):
     def __init__(self, parent):
@@ -242,11 +245,12 @@ class QtMain(QMainWindow):
                 else:
                     target_node = self.RSA_components().vector.root_node(ID_string=selected_ID_string)
 
-            ID_string = target_node.ID_string()
-            self.GUI_components().treeview.select(ID_string=ID_string)
-            target_node.delete()
-            self.GUI_components().treeview.delete(ID_string=ID_string)
-            self.GUI_components().sliceview.update_trace_graphics()
+            if target_node is not None:
+                ID_string = target_node.ID_string()
+                self.GUI_components().treeview.select(ID_string=ID_string)
+                target_node.delete()
+                self.GUI_components().treeview.delete(ID_string=ID_string)
+                self.GUI_components().sliceview.update_trace_graphics()
 
         return
 
@@ -329,4 +333,4 @@ class VolumeLoader(QThread):
         self.quit()
 
     def data(self):
-        return np.array(self.__data, dtype=np.uint8)
+        return np.array(self.__data)

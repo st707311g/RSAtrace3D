@@ -1,10 +1,12 @@
-from typing import List, Union, Generator
-import numpy as np
+import glob
 import json
 import logging
-import os, glob
+import os
+from typing import Generator, List, Union
 
 import config
+import numpy as np
+
 
 class RinfoFiles(object):
     def __init__(self, files:List[str]=None):
@@ -354,7 +356,7 @@ class RSA_Vector(Node):
     def base_node_count(self):
         return len(self)
 
-    def base_node(self, baseID: int = 1, ID_string: ID_Object = None) -> Union[BaseNode, None]:
+    def base_node(self, baseID: int = 1, ID_string: ID_Object = None) -> BaseNode:
         if ID_string is not None:
             baseID, rootID, relayID = ID_string.split()
 
@@ -362,35 +364,35 @@ class RSA_Vector(Node):
             if base_node.ID == baseID:
                 return base_node
 
-        return None
+        raise Exception
 
-    def root_node(self, baseID: int = 1, rootID: int = 1, ID_string: ID_Object = None) -> Union[RootNode, None]:
+    def root_node(self, baseID: int = 1, rootID: int = 1, ID_string: ID_Object = None) -> RootNode:
         if ID_string is not None:
             baseID, rootID, relayID = ID_string.split()
 
         base_node = self.base_node(baseID=baseID)
         if base_node is None:
-            return None
+            raise Exception
 
         for root_node in base_node:
             if root_node.ID == rootID:
                 return root_node
-        
-        return None
 
-    def relay_node(self, baseID: int = 1, rootID: int = 1, relayID: int = 1, ID_string: ID_Object = None) -> Union[RelayNode, None]:
+        raise Exception
+
+    def relay_node(self, baseID: int = 1, rootID: int = 1, relayID: int = 1, ID_string: ID_Object = None) -> RelayNode:
         if ID_string is not None:
             baseID, rootID, relayID = ID_string.split()
 
         root_node = self.root_node(ID_string=ID_string)
         if root_node is None:
-            return None
+            raise Exception
 
         for relay_node in root_node:
             if relay_node.ID == relayID:
                 return relay_node
         
-        return None
+        raise Exception
 
     def append_base(self, annotations:dict={}):
         return self.append(annotations=annotations)

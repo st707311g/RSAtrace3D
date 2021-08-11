@@ -1,12 +1,12 @@
+import logging
+
+import pandas as pd
+from DATA import ID_Object, RSA_Components
 from DATA.RSA.components.rinfo import ID_Object
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QStandardItemModel, QAbstractItemView
-from PyQt5.QtWidgets import QTreeView, QHeaderView, QHeaderView
+from PyQt5.QtGui import QAbstractItemView, QStandardItemModel
+from PyQt5.QtWidgets import QHeaderView, QTreeView
 
-from DATA import ID_Object, RSA_Components
-import pandas as pd
-
-import logging
 
 class TreeViewHeader(QHeaderView):
     def __init__(self):
@@ -224,13 +224,14 @@ class QtTreeView(QTreeView):
             return
 
         item = self.model.get_item(ID_string=ID_string)
-        parent = item.parent()
-        nr = item.row()
+        if item is not None:
+            parent = item.parent()
+            nr = item.row()
 
-        parent = parent or self.model
-        parent.removeRow(nr)
+            parent = parent or self.model
+            parent.removeRow(nr)
 
-        return self
+            return self
 
     def select(self, ID_string: ID_Object):
         if ID_string is None:

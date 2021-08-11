@@ -1,5 +1,6 @@
 import os
 
+
 class File(object):
     def __init__(self, volume_directory: str=''):
         super().__init__()
@@ -8,7 +9,11 @@ class File(object):
             self.set(directory=volume_directory)
 
     def clear(self):
+        self.directory = ''
         self.rinfo_file = ''
+
+    def extensions(self):
+        return ('.cb', '.png', '.tif', '.tiff', '.jpg', '.jpeg')
 
     def set(self, directory: str):
         self.directory = directory
@@ -18,7 +23,13 @@ class File(object):
         self.volume = os.path.basename(self.directory)
 
         self.img_files = [os.path.join(self.directory, f) for f in os.listdir(self.directory)]
-        self.img_files = [f for f in self.img_files if os.path.isfile(f) and f.lower().endswith(('.png', '.tif', '.tiff', '.jpg', '.jpeg'))]
+        ext_count = []
+        for ext in self.extensions():
+            ext_count.append(len([f for f in self.img_files if f.lower().endswith(ext)]))
+
+        target_ext = self.extensions()[ext_count.index(max(ext_count))]
+
+        self.img_files = [f for f in self.img_files if f.lower().endswith(target_ext)]
         self.img_files.sort()
 
     def is_rinfo_file_available(self):
@@ -26,3 +37,9 @@ class File(object):
 
     def is_valid(self):
         return len(self.img_files) >= 64
+
+    def __str__(self):
+        return (f'Number of image files: {len(self.img_files)}')
+
+if __name__ == '__main__':
+    pass

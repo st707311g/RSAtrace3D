@@ -50,11 +50,12 @@ class _ClassLoader(object):
         self.load_files()
 
     def load_files(self):
-        files = glob.glob(pathname='mod/**/*.py', recursive=True)
+        files = glob.glob(pathname=os.path.join(os.path.dirname(__file__),'**/*.py'), recursive=True)
         files = [f for f in files if not os.path.basename(f).startswith('_')]
         files.sort()
 
         for f in files:
+            f = f[len(os.path.dirname(os.path.dirname(__file__)))+1:]
             try:
                 m_path, _ = os.path.splitext(f)
                 m_path = m_path.replace('/', '.').replace('\\', '.')

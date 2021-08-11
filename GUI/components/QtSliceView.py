@@ -1,11 +1,13 @@
-from typing import Dict, List
-from pyqtgraph import ImageView, ImageItem, GraphItem, TextItem, mkPen, mkBrush, IsocurveItem, ViewBox
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QPen, QBrush
-
-from DATA import ID_Object, TraceObject, RSA_Components
-import numpy as np
 import logging
+from typing import Dict, List
+
+import numpy as np
+from DATA import ID_Object, RSA_Components, TraceObject
+from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtGui import QBrush, QPen
+from pyqtgraph import (GraphItem, ImageItem, ImageView, IsocurveItem, TextItem,
+                       ViewBox, mkBrush, mkPen)
+
 
 class _ImageViewBox(ViewBox):
     def __init__(self):
@@ -209,18 +211,19 @@ class QtSliceView(ImageView):
             base_node = self.RSA_components().vector.base_node(ID_string=ID_string)
             target_coordinate = base_node['coordinate']
 
-        self.setCurrentIndex(target_coordinate[0])
+        if target_coordinate is not None:
+            self.setCurrentIndex(target_coordinate[0])
 
-        x_range = self.x_range
-        y_range = self.y_range
-        if len(x_range) != 0:
-            x_len = x_range[1]-x_range[0]+1
-            y_len = y_range[1]-y_range[0]+1
-            x = target_coordinate[2]
-            y = target_coordinate[1]
-            x_range = [x-x_len/2, x+x_len/2]
-            y_range = [y-y_len/2, y+y_len/2]
-            self.view.setRange(xRange=x_range, yRange=y_range)
+            x_range = self.x_range
+            y_range = self.y_range
+            if len(x_range) != 0:
+                x_len = x_range[1]-x_range[0]+1
+                y_len = y_range[1]-y_range[0]+1
+                x = target_coordinate[2]
+                y = target_coordinate[1]
+                x_range = [x-x_len/2, x+x_len/2]
+                y_range = [y-y_len/2, y+y_len/2]
+                self.view.setRange(xRange=x_range, yRange=y_range)
 
 class PosMarks(GraphItem):
     def __init__(self, imageview):
@@ -279,16 +282,18 @@ class PosMarks(GraphItem):
         draw_parameters = self.make_draw_parameter_class()
         
         def add_marks(ID_string, pen: QPen, brush: QBrush):
-            clicked_coordinate = self.RSA_components().vector[ID_string]['coordinate']
-            if clicked_coordinate is None :
-                return
+            node = self.RSA_components().vector[ID_string]
+            if node is not None:
+                clicked_coordinate = node['coordinate']
+                if clicked_coordinate is None :
+                    return
 
-            draw_parameters.add_node(
-                pos=[clicked_coordinate[2]+0.5, clicked_coordinate[1]+0.5],
-                symbolPen=pen, 
-                symbolBrush=brush, 
-                text=ID_string
-                )
+                draw_parameters.add_node(
+                    pos=[clicked_coordinate[2]+0.5, clicked_coordinate[1]+0.5],
+                    symbolPen=pen, 
+                    symbolBrush=brush, 
+                    text=ID_string
+                    )
 
         add_marks(ID_string.to_base(), mkPen((255,0,0)), mkBrush((255, 0, 0, 64)))
 
@@ -375,9 +380,10 @@ class _IsocurveItem(IsocurveItem):
             shape=RSA_vector.annotations.volume_shape(), 
             dimensions=[1,2])
 
-        img = trace_obj.volume[:,:,1]
+        if trace_obj is not None:
+            img = trace_obj.volume[:,:,1]
 
-        if img is None:
-            self.setData(None)
-        else:
-            self.setData(img.transpose(1,0))
+            if img is None:
+                self.setData(None)
+            else:
+                self.setData(img.transpose(1,0))

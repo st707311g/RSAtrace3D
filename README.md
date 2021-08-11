@@ -3,7 +3,7 @@
 ![python](https://img.shields.io/badge/Python->3.6-lightgreen)
 ![developed_by](https://img.shields.io/badge/developed%20by-Shota_Teramoto-lightgreen)
 ![version](https://img.shields.io/badge/version-1.1-lightgreen)
-![last_updated](https://img.shields.io/badge/last_update-July_15,_2021-lightgreen)
+![last_updated](https://img.shields.io/badge/last_update-August_11,_2021-lightgreen)
 
 ![GUI](./figures/RSAtrace3D.jpg) 
 
@@ -22,10 +22,19 @@ RSAtrace3D depends on the following packages:
 - scikit-image
 - pandas
 - PyQt5
-- pyqtgraph
+- pyqtgraph (Version 0.12.2 does not work. Use version <= 0.12.1)
 - psutil
 
-The confirmed operating environment is shown below:
+The following command will install the necessary packages.
+
+```
+pip install -U pip
+pip install -r requirements.txt
+```
+
+The confirmed operating environments are shown below:
+
+Environment 1:
 
 - CPU: Intel<sup>(R)</sup> Core<sup>(TM)</sup> i7-8700 CPU @ 3.20 GHz
 - Memory: 32 GB
@@ -38,6 +47,8 @@ The confirmed operating environment is shown below:
     - PyQt5 (5.14.2)
     - pyqtgraph (0.10.0)
     - psutil (5.7.0)
+
+Environment 2:
 
 - CPU: Intel<sup>(R)</sup> Core<sup>(TM)</sup> i7-8700 CPU @ 3.20 GHz
 - Memory: 32 GB
@@ -95,5 +106,6 @@ https://rootomics.dna.affrc.go.jp/en/
   * install: projection view slice line
   * install: manual
   * fix: behavior when the spacebar is pressed
-  * fix: run the program under Windows 10 (July 15, 2021)
+  * fix: running the program under Windows 10 (July 15, 2021)
+  * fix: importing mod modules (August 11, 2021)
   

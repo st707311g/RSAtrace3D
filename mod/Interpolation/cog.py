@@ -1,6 +1,9 @@
-from .__backbone__ import InterpolationBackbone
 from typing import List
+
 import numpy as np
+
+from .__backbone__ import InterpolationBackbone
+
 
 #// interpolation by COG tracking
 class COG_tracking(InterpolationBackbone):
@@ -53,6 +56,8 @@ class COG_tracking(InterpolationBackbone):
 
         #//get a subvolume from where the root vector will move to
         subvol = self.func_get_subvolume(from_+root_v, self.window_size)
+        if subvol is None:
+            raise Exception
 
         #// COG calculation
         sum_ = np.sum(subvol)
