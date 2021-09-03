@@ -3,7 +3,7 @@
 ![python](https://img.shields.io/badge/Python->3.6-lightgreen)
 ![developed_by](https://img.shields.io/badge/developed%20by-Shota_Teramoto-lightgreen)
 ![version](https://img.shields.io/badge/version-1.1-lightgreen)
-![last_updated](https://img.shields.io/badge/last_update-August_11,_2021-lightgreen)
+![last_updated](https://img.shields.io/badge/last_update-September_3,_2021-lightgreen)
 
 ![GUI](./figures/RSAtrace3D.jpg) 
 
@@ -78,10 +78,6 @@ A manual file is avairable [here](./manual/how_to_use.md).
 ## version policy
 
 Version information consists of major and minor versions (major.minor). When the major version increases by one, it is no longer compatible with the original version. When the minor version invreases by one, compatibility will be maintained. Revisions that do not affect functionality, such as bug fixes and design changes, will not affect the version number.
-
-## license
-
-RSAtrace3D is dual licensed under the Massachusetts Institute of Technology (MIT) license (https://opensource.org/licenses/mit-license.php) and a commercial license. For academic use, RSAtrace3D is under the MIT license. Otherwise, RSAtrace3D is under the commercial license. Please contact the National Agriculture and Food Research Organization.
 
 ## citation
 
