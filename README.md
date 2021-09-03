@@ -100,6 +100,7 @@ This license is for 'Non-Commercial' use of software for RSAtrace3D
 * Selling, renting, re-use of license, or use for business purposes etc. of RSAtrace3D shall not be allowed. For commercial use, license of commercial use is required. Inquiries for such commercial license are directed to NARO.
 * The RSAtrace3D may be changed, or the distribution maybe canceled without advance notification.
 *In case the result obtained using RSAtrace3D in used for publication in academic journals etc., please refer the publication of RSAtrace3D and/or acknowledge the use of RSAtrace3D in the publication.
+
 Copyright (C) 2020 National Agriculture and Food Research Organization. All rights reserved.
 
 ## project homepage
