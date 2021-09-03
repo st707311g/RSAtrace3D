@@ -19,7 +19,7 @@ class COG_tracking(InterpolationBackbone):
         self.unit_length = 4
 
         #// preparing
-        self.func_get_subvolume = self.RSA_components().volume.get_trimed_volume #// a function returning a local subvolume
+        self.func_get_subvolume = self.RSA_components().volume.get_trimmed_volume #// a function returning a local subvolume
         polyline = np.array(polyline[::-1], dtype=np.float32)
 
         self.log = []

@@ -1,10 +1,10 @@
-from PyQt5.QtWidgets import QWidget, QGridLayout
-from pyqtgraph import  ViewBox, ImageItem, mkColor, InfiniteLine
-from pyqtgraph.widgets.GraphicsLayoutWidget import GraphicsLayoutWidget
-from PyQt5.QtCore import pyqtSignal, Qt
-
-from DATA import ID_Object, RSA_Components
 import numpy as np
+from DATA import ID_Object, RSA_Components
+from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtWidgets import QGridLayout, QWidget
+from pyqtgraph import ImageItem, InfiniteLine, ViewBox, mkColor
+from pyqtgraph.widgets.GraphicsLayoutWidget import GraphicsLayoutWidget
+
 
 class CoreViewBox(ViewBox):
     pyqtSignal_mouseClickEvent = pyqtSignal(int, object, int, bool)
@@ -177,12 +177,13 @@ class QtProjectionView(QWidget):
                 if not ID_string.is_root():
                     continue
                 root_node = self.RSA_components().vector.root_node(ID_string=ID_string)
-                distance = self.__get_closest_distance(\
-                    ref_coordinate=np.array([int(coordinate.y()), int(coordinate.x())]), \
-                    from_polyline=root_node.completed_polyline(), \
-                    index=self.current_view_index)
-                ID_string_list.append(ID_string)
-                distance_list.append(distance)
+                if root_node is not None:
+                    distance = self.__get_closest_distance(\
+                        ref_coordinate=np.array([int(coordinate.y()), int(coordinate.x())]), \
+                        from_polyline=root_node.completed_polyline(), \
+                        index=self.current_view_index)
+                    ID_string_list.append(ID_string)
+                    distance_list.append(distance)
 
             if len(ID_string_list) == 0:
                 return

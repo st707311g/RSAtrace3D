@@ -2,7 +2,7 @@ import glob
 import json
 import logging
 import os
-from typing import Generator, List, Union
+from typing import Generator, Iterator, List, Union
 
 import config
 import numpy as np
@@ -29,7 +29,7 @@ class ID_Object(str):
         def __raise_exception():
             raise Exception('The arguments must be a list or tuple of length 3, three numbers, or a string in ID_Object format.')
 
-        if type(key) is str:
+        if isinstance(key, str):
             if key.count('-') != 2:
                 __raise_exception()
             return super().__new__(cls, *(key,))
@@ -145,7 +145,7 @@ class Polyline(list):
     pass
 
 class RelayNode(Node):
-    def __init__(self, ID: int, parent, annotations: dict):
+    def __init__(self, ID: int, parent: 'RootNode', annotations: dict):
         super().__init__()
         self.ID = ID
         self.__parent = parent
@@ -180,7 +180,7 @@ class RelayNode(Node):
         return self.root_node().ID
 
 class RootNode(Node):
-    def __init__(self, ID: int, parent, annotations: dict):
+    def __init__(self, ID: int, parent: 'BaseNode', annotations: dict):
         super().__init__()
         self.ID = ID
         self.__parent = parent
@@ -197,6 +197,9 @@ class RootNode(Node):
                 return v
             return None
 
+    def __iter__(self) -> Iterator[RelayNode]:
+        return super().__iter__()
+
     def ID_string(self):
         return ID_Object([self.baseID(), self.ID, 0])
 
@@ -211,7 +214,7 @@ class RootNode(Node):
         else:
             self.__interpolated_polyline = self.annotations['polyline']
 
-        return node.annotations["ID_string"]
+        return ID_Object(node.annotations["ID_string"])
 
     def parent(self):
         return self.__parent
@@ -252,6 +255,8 @@ class RootNode(Node):
         pos_list = [self.base_node()['coordinate']]
         pos_list.extend([relay_node['coordinate'] for relay_node in self])
 
+        pos_list = [p for p in pos_list if p is not None]
+
         self.__raw_polyline = pos_list
         self.__raw_polyline = self.__reorder_polyline(self.__raw_polyline)
 
@@ -285,7 +290,7 @@ class RootNode(Node):
         return self.__raw_polyline[-1]
 
 class BaseNode(Node):
-    def __init__(self, ID: int, parent, annotations: dict):
+    def __init__(self, ID: int, parent: 'RSA_Vector', annotations: dict):
         super().__init__()
         self.ID = ID
         self.__parent = parent
@@ -297,6 +302,9 @@ class BaseNode(Node):
             if k == key:
                 return v
             return None
+
+    def __iter__(self) -> Iterator[RootNode]:
+        return super().__iter__()
 
     def parent(self):
         return self.__parent
@@ -314,7 +322,7 @@ class BaseNode(Node):
         rootID = rootID or self.next_id()
         node = RootNode(rootID, parent=self, annotations=annotations)
         super().append(node)
-        return node.annotations["ID_string"]
+        return ID_Object(node.annotations["ID_string"])
 
     def child_ID_strings(self):
         return [node['ID_string'] for node in self]
@@ -340,6 +348,9 @@ class RSA_Vector(Node):
         if ID_string.is_relay():
             return self.relay_node(ID_string=ID_string)
 
+    def __iter__(self) -> Iterator[BaseNode]:
+        return super().__iter__()
+
     def clear(self):
         super().clear()
         self.annotations = _Annotations()
@@ -351,7 +362,7 @@ class RSA_Vector(Node):
         baseID = baseID or 1
         node = BaseNode(baseID, parent=self, annotations=annotations)
         super().append(node)
-        return node.annotations["ID_string"]
+        return ID_Object(node.annotations["ID_string"])
 
     def base_node_count(self):
         return len(self)
@@ -398,18 +409,20 @@ class RSA_Vector(Node):
         return self.append(annotations=annotations)
 
     def append_root(self, baseID, annotations:dict={}):
-        for node in self:
-            if node.ID == baseID:
-                return node.append(annotations=annotations)
-        return None
+        for base_node in self:
+            if base_node.ID == baseID:
+                return base_node.append(annotations=annotations)
+        
+        assert False
 
     def append_relay(self, baseID, rootID, annotations:dict={}):
-        for node in self:
-            if node.ID == baseID:
-                for node2 in node:
-                    if node2.ID == rootID:
-                        return node2.append(annotations=annotations)
-        return None
+        for base_node in self:
+            if base_node.ID == baseID:
+                for root_node in base_node:
+                    if root_node.ID == rootID:
+                        return root_node.append(annotations=annotations)
+
+        assert False
 
     def RSA_components(self):
         return self.__RSA_components
@@ -493,3 +506,5 @@ class RSA_Vector(Node):
                 yield root_node.ID_string()
                 for relay_node in root_node:
                     yield relay_node.ID_string()
+
+

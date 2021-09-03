@@ -3,6 +3,7 @@ import logging
 import os
 
 import config
+import GUI
 import numpy as np
 from DATA import File, RSA_Components
 from mod import Extensions, Interpolation, RootTraits, RSATraits
@@ -234,16 +235,18 @@ class QtMain(QMainWindow):
                 return
 
             #// choose ID_string that should be deleted
+            target_node = None
             if selected_ID_string.is_base():
                 target_node = self.RSA_components().vector.base_node(ID_string=selected_ID_string)
             elif selected_ID_string.is_root():
                 target_node = self.RSA_components().vector.root_node(ID_string=selected_ID_string)
             else:
                 root_node = self.RSA_components().vector.root_node(ID_string=selected_ID_string)
-                if root_node.child_count() > 1:
-                    target_node = self.RSA_components().vector.relay_node(ID_string=selected_ID_string)
-                else:
-                    target_node = self.RSA_components().vector.root_node(ID_string=selected_ID_string)
+                if root_node is not None:
+                    if root_node.child_count() > 1:
+                        target_node = self.RSA_components().vector.relay_node(ID_string=selected_ID_string)
+                    else:
+                        target_node = self.RSA_components().vector.root_node(ID_string=selected_ID_string)
 
             if target_node is not None:
                 ID_string = target_node.ID_string()

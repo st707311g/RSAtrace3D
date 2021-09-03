@@ -1,15 +1,17 @@
 #// a module of RSAtrace3D for calculating root growth angle
 
-import os, sys
-from statistics import mean, stdev
 import math
+import os
+import sys
+from statistics import mean, stdev
 
 if __name__ == '__main__':
     sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
+from DATA import ID_Object, RSA_Vector
 from mod.Traits.__backbone__ import RootTraitBackbone, RSATraitBackbone
 from mod.Traits.__test__ import ModuleTest
-from DATA import RSA_Vector, ID_Object
+
 
 #// [single root] root angle calculation
 class Root_Angle(RootTraitBackbone):
@@ -26,13 +28,17 @@ class Root_Angle(RootTraitBackbone):
             return ""
 
         #// interpolated polyline obtained
-        polyline = RSA_vector.root_node(ID_string=ID_string).interpolated_polyline()
-        if len(polyline)==0:
-            return ""
+        root_node = RSA_vector.root_node(ID_string=ID_string)
+        if root_node is not None:
+            polyline = root_node.interpolated_polyline()
+            if len(polyline)==0:
+                return ""
 
-        #// angle calculated
-        angle = round(self.__calc_angle(polyline[0], polyline[-1]), 2)
-        return angle
+            #// angle calculated
+            angle = round(self.__calc_angle(polyline[0], polyline[-1]), 2)
+            return angle
+
+        return ""
 
     #// text to be shown
     def str_value(self):

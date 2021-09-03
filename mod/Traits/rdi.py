@@ -32,7 +32,8 @@ class RSA_RDI(RSATraitBackbone):
                 base_node = RSA_vector.base_node(ID_string=ID_string)
             elif ID_string.is_root():
                 root_node = RSA_vector.root_node(ID_string=ID_string)
-                polyline.extend(root_node.completed_polyline())
+                if root_node is not None:
+                    polyline.extend(root_node.completed_polyline())
 
         if base_node is None:
             return None

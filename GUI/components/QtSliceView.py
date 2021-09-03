@@ -3,6 +3,7 @@ from typing import Dict, List
 
 import numpy as np
 from DATA import ID_Object, RSA_Components, TraceObject
+from GUI.components import QtMain
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QBrush, QPen
 from pyqtgraph import (GraphItem, ImageItem, ImageView, IsocurveItem, TextItem,
@@ -25,7 +26,7 @@ class _ImageItem3D(ImageItem):
         return super().getHistogram(bins=64, **kwds)
 
 class QtSliceView(ImageView):
-    def __init__(self, parent):
+    def __init__(self, parent: QtMain):
         super().__init__(**{'parent':parent, 'view':_ImageViewBox(), 'imageItem':_ImageItem3D()})
         self.logger = logging.getLogger(self.__class__.__name__)
         self.__parent=parent
@@ -129,7 +130,11 @@ class QtSliceView(ImageView):
         if selected_ID_string is None:
             return
 
-        ID_string = self.RSA_components().vector.append_root(baseID=selected_ID_string.split()[0])
+        base_node = self.RSA_components().vector.base_node(baseID=selected_ID_string.baseID())
+        if base_node is None:
+            return
+
+        ID_string = base_node.append()
         self.GUI_components().treeview.add_root(ID_string=ID_string)
         self.add_relay(annotations=annotations, root_ID_string=ID_string)
 
@@ -138,9 +143,14 @@ class QtSliceView(ImageView):
         if selected_ID_string is None or selected_ID_string.is_base():
             return
 
+        base_node = self.RSA_components().vector.base_node(baseID=selected_ID_string.baseID())
+        if base_node is None:
+            return
+
         baseID, rootID, _ = selected_ID_string.split()
         ID_string = self.RSA_components().vector.append_relay(baseID=baseID, rootID=rootID, annotations=annotations)
-        self.GUI_components().treeview.add_relay(ID_string=ID_string)
+        if ID_string is not None:
+            self.GUI_components().treeview.add_relay(ID_string=ID_string)
 
         self.update_trace_graphics()
 
@@ -169,8 +179,9 @@ class QtSliceView(ImageView):
         self.GUI_components().projectionview.set_trace(projections=self.RSA_components().trace.projections)
 
         self.pos_marks.draw(ID_string=selected_ID_string)
-        self.isocurve.draw(ID_string=selected_ID_string)
-        self.GUI_components().projectionview.on_selected_item_changed(ID_string=selected_ID_string)
+        if selected_ID_string is not None:
+            self.isocurve.draw(ID_string=selected_ID_string)
+            self.GUI_components().projectionview.on_selected_item_changed(ID_string=selected_ID_string)
         self.parent().set_control(locked=False)
         
     def update_volume(self, volume):

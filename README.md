@@ -89,9 +89,22 @@ Please cite the following article:
 
 Shota Teramoto et al. RSAtrace3D: robust vectorization software for measuring monocot root system architecture (2021) BMC plant biol. in press.
 
-## copyright
+## license
 
-National Agriculture and Food Research Organization (2020)
+NARO NON-COMMERCIAL LICENSE AGREEMENT Version 1.0
+
+This license is for 'Non-Commercial' use of software for RSAtrace3D
+
+Scientific use of RSAtrace3D is permitted free of charge.
+Modification of RSAtrace3D is only permitted to the person of downloaded and his/her colleagues.
+The National Agriculture and Food Research Organization (hereinafter referred to as NARO) does not guarantee that defects, errors or malfunction will not occur with respect to RSAtrace3D.
+NARO shall not be responsible or liable for any damage or loss caused or be alleged to be caused, directly or indirectly, by the download and use of RSAtrace3D.
+NARO shall not be obligated to correct or repair the program regardless of the extent, even if there are any defects of malfunctions in RSAtrace3D.
+The copyright and all other rights of RSAtrace3D belong to NARO.
+Selling, renting, re-use of license, or use for business purposes etc. of RSAtrace3D shall not be allowed. For commercial use, license of commercial use is required. Inquiries for such commercial license are directed to NARO.
+The RSAtrace3D may be changed, or the distribution maybe canceled without advance notification.
+In case the result obtained using RSAtrace3D in used for publication in academic journals etc., please refer the publication of RSAtrace3D and/or acknowledge the use of RSAtrace3D in the publication.
+Copyright (C) 2020 National Agriculture and Food Research Organization. All rights reserved.
 
 ## project homepage
 https://rootomics.dna.affrc.go.jp/en/
@@ -108,4 +121,5 @@ https://rootomics.dna.affrc.go.jp/en/
   * fix: behavior when the spacebar is pressed
   * fix: running the program under Windows 10 (July 15, 2021)
   * fix: importing mod modules (August 11, 2021)
+  * adjust: coding of some files (September, 3, 2021)
   

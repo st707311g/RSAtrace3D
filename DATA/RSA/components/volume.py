@@ -25,7 +25,7 @@ class Volume(object):
         self.data = volume
         self.logger.debug(f'The volume data initialized.')
 
-    def get_trimed_volume(self, center, radius):
+    def get_trimmed_volume(self, center, radius):
         if self.data is not None:
             S = radius*2+1
             pos = [int(i) for i in center]
