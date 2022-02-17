@@ -276,7 +276,7 @@ class RootNode(Node):
 
         def complete(node1: List[int], node2: List[int]):
             max_dif: int = max([abs(n2-n1) for n1,n2 in zip(node1,node2)])
-            return np.stack([np.linspace(node1[i], node2[i], max_dif+1, dtype=np.int32) for i in range(3)]).T.tolist()
+            return np.transpose(np.stack([np.linspace(node1[i], node2[i], max_dif+1, dtype=np.int32) for i in range(3)])).tolist()
 
         self.__completed_polyline = Polyline()
         
@@ -483,7 +483,7 @@ class RSA_Vector(Node):
     def save(self, rinfo_file_name: str):
         class encoder(json.JSONEncoder):
             def default(self, obj):
-                if isinstance(obj, np.integer):
+                if isinstance(obj, np.integer): #type: ignore
                     return int(obj)
                 elif isinstance(obj, np.ndarray):
                     return obj.tolist()

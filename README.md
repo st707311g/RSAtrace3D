@@ -1,9 +1,9 @@
 # RSAtrace3D: a root system architecture vectorization software for monocot plants
 
-![python](https://img.shields.io/badge/Python->3.6-lightgreen)
+![python](https://img.shields.io/badge/Python->3.8-lightgreen)
 ![developed_by](https://img.shields.io/badge/developed%20by-Shota_Teramoto-lightgreen)
-![version](https://img.shields.io/badge/version-1.1-lightgreen)
-![last_updated](https://img.shields.io/badge/last_update-September_3,_2021-lightgreen)
+![version](https://img.shields.io/badge/version-1.2-lightgreen)
+![last_updated](https://img.shields.io/badge/last_update-February_17,_2022-lightgreen)
 
 ![GUI](./figures/RSAtrace3D.jpg) 
 
@@ -119,4 +119,6 @@ https://rootomics.dna.affrc.go.jp/en/
   * fix: running the program under Windows 10 (July 15, 2021)
   * fix: importing mod modules (August 11, 2021)
   * adjust: coding of some files (September, 3, 2021)
-  
+* version 1.2 (February, 17, 2022)
+  * adjust: behavior of close-up in the slice view
+  * adjust: coding of some files

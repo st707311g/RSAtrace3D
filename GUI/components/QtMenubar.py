@@ -159,11 +159,11 @@ class QtMenubar(QMenuBar):
                 projection_image = view.projection_image.image
                 trace_image = view.trace_image.image
                 alpha = trace_image[[...,3]]/255
-                alpha = np.stack([alpha,alpha,alpha], axis=2)
+                alpha = np.array(np.stack([alpha,alpha,alpha], axis=2))
                 out_image= np.zeros(projection_image.shape+(3,))
                 out_image = np.stack([projection_image,projection_image,projection_image], axis=2)
 
-                out_image = np.asarray(out_image*(1-alpha) + trace_image[..., 0:3]*alpha, dtype=np.uint8).transpose(1,0,2)
+                out_image = np.array(out_image*(1-alpha) + trace_image[..., 0:3]*alpha, dtype=np.uint8).transpose(1,0,2)
                 out_file = f'{self.RSA_components().file.directory}_projection{i+1}.png'
                 
                 io.imsave(out_file, out_image)

@@ -1,6 +1,11 @@
-from PyQt5.QtWidgets import QMenu, QAction
-import os, json, config
+import json
 import logging
+import os
+
+from PyQt5.QtWidgets import QAction, QMenu
+
+import config
+
 
 class History():
     def __init__(self, max_count, menu_label):

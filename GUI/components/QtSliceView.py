@@ -1,22 +1,35 @@
 import logging
-from typing import Dict, List
+from typing import List
 
 import numpy as np
 from DATA import ID_Object, RSA_Components, TraceObject
 from GUI.components import QtMain
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QBrush, QPen
-from pyqtgraph import (GraphItem, ImageItem, ImageView, IsocurveItem, TextItem,
-                       ViewBox, mkBrush, mkPen)
+from PyQt5.QtWidgets import QGraphicsSceneWheelEvent
+from pyqtgraph import (GraphItem, ImageItem, ImageView, IsocurveItem, Point,
+                       TextItem, ViewBox, fn, mkBrush, mkPen)
 
 
 class _ImageViewBox(ViewBox):
     def __init__(self):
         super().__init__()
 
-    def wheelEvent(self, ev):
-        if ev.modifiers() & Qt.ControlModifier:
-            super().wheelEvent(ev)
+    def wheelEvent(self, ev: QGraphicsSceneWheelEvent, axis=None):
+        if axis in (0, 1):
+            mask = [False, False]
+            mask[axis] = self.state['mouseEnabled'][axis]
+        else:
+            mask = self.state['mouseEnabled'][:]
+        s = 1.02 ** (ev.delta() * self.state['wheelScaleFactor']) # actual scaling factor
+        s = [(None if m is False else s) for m in mask]
+        #center = Point(fn.invertQTransform(self.childGroup.transform()).map(ev.pos()))
+        center = Point(fn.invertQTransform(self.childGroup.transform()).map(ev.scenePos()))
+
+        self._resetTarget()
+        self.scaleBy(s, center)
+        ev.accept()
+        self.sigRangeChangedManually.emit(mask)
 
 class _ImageItem3D(ImageItem):
     def __init__(self):
@@ -203,7 +216,11 @@ class QtSliceView(ImageView):
             self.view.wheelEvent(ev)
             return
 
-        index = max(self.currentIndex-1,0) if ev.delta()>0 else min(self.currentIndex+1, self.getProcessedImage().shape[0]-1)
+        processed_image = self.getProcessedImage()
+        if not isinstance(processed_image, np.ndarray):
+            return
+        
+        index = max(self.currentIndex-1,0) if ev.delta()>0 else min(self.currentIndex+1, processed_image.shape[0]-1)
         self.setCurrentIndex(index)
 
     def update_trace3D(self, trace3d: TraceObject):
@@ -271,7 +288,7 @@ class PosMarks(GraphItem):
 
             def to_dict(self):
                 return_dict = self.__dict.copy()
-                return_dict['pos'] = np.asarray(return_dict['pos'])
+                return_dict['pos'] = np.array(return_dict['pos'])
 
                 return return_dict
 

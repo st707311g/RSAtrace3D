@@ -41,10 +41,10 @@ class COG_tracking(InterpolationBackbone):
         return self.log.tolist()
 
     def distance_between(self, aryA, aryB):
-        return np.sqrt(np.square(aryB-aryA).sum())
+        return np.sqrt(np.square(aryB-aryA).sum()) #type: ignore
 
     def is_terminated(self, start_pos, end_pos):
-        return self.distance_between(start_pos, end_pos) < self.window_size*5
+        return self.distance_between(start_pos, end_pos) < self.window_size*5 #type: ignore
 
     def get_vector(self, from_, to_, prev_v):
         #// a root vector foward to the base node

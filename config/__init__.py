@@ -1,9 +1,11 @@
-import os, json
+import json
+import os
+
 from .history import History
 
 application_name = 'RSAtrace3D'
 version = 1
-revision = 1
+revision = 2
 
 def version_string():
     return f'{version}.{revision}'

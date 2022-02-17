@@ -1,8 +1,8 @@
-from PyQt5.QtCore import QObject, pyqtSignal, QThread, QTimer
-from PyQt5.QtWidgets import QStatusBar, QProgressBar, QLabel, QSizePolicy
-
-from DATA import RSA_Components
 import psutil
+from DATA import RSA_Components
+from PyQt5.QtCore import QObject, QThread, QTimer, pyqtSignal
+from PyQt5.QtWidgets import QLabel, QProgressBar, QSizePolicy, QStatusBar
+
 
 class QtStatusBarW(QObject):
     pyqtSignal_update_progressbar = pyqtSignal(int, int, str)
@@ -76,10 +76,11 @@ class QtStatusBar(QStatusBar):
         mem_percent = psutil.virtual_memory().percent
         cpu_percent = psutil.cpu_percent()
 
-        for msg, hard, p in zip([self.mem_msg, self.cpu_msg], ['Memory', 'CPU'], [mem_percent, cpu_percent]):
-            bg_color = 'yellow' if p > 80 else 'transparent'
-            msg.setStyleSheet("QLabel { background-color : %s; color : black; }" % bg_color)
-            msg.setText(' %s: %.01f %% ' % (hard, p))
+        if isinstance(mem_percent, float) and isinstance(cpu_percent, float):
+            for msg, hard, p in zip([self.mem_msg, self.cpu_msg], ['Memory', 'CPU'], [mem_percent, cpu_percent]):
+                bg_color = 'yellow' if p > 80 else 'transparent'
+                msg.setStyleSheet("QLabel { background-color : %s; color : black; }" % bg_color)
+                msg.setText(' %s: %.01f %% ' % (hard, p))
 
     def update_mouse_position(self, z=-1, y=-1, x=-1):
         if (z<0 and y<0 and x<0) or self.RSA_components().volume.is_empty():
