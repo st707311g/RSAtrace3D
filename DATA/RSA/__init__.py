@@ -1,4 +1,13 @@
-from .components import Volume, ID_Object, RSA_Vector, RinfoFiles, Trace, TraceObject, File
+from .components import (
+    File,
+    ID_Object,
+    RinfoFiles,
+    RSA_Vector,
+    Trace,
+    TraceObject,
+    Volume,
+)
+
 
 class RSA_Components(object):
     def __init__(self, parent):

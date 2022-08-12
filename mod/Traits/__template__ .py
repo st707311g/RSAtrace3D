@@ -1,26 +1,33 @@
-import os, sys
+import os
+import sys
 
-if __name__ == '__main__':
-    sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
+if __name__ == "__main__":
+    sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
 
+from DATA import ID_Object, RSA_Vector
 from mod.Traits.__backbone__ import RootTraitBackbone, RSATraitBackbone
 from mod.Traits.__test__ import ModuleTest
-from DATA import RSA_Vector, ID_Object
 
-#// an template for root trait measurements
-#// create a class that inherits from RootTraitBackbone.
+
+# // an template for root trait measurements
+# // create a class that inherits from RootTraitBackbone.
 class Root_Template(RootTraitBackbone):
-    built_in = False #// please use False only
-    label = 'template' #// label name here
-    tool_tip = 'Tips.' #// show this message when the mouse cursor hovers on the item
-    sublabels = ['a', 'b'] #// if you store multiple items in csv, please provide as many sub-labels as you want
-    index = 0 #// determines the order in which the labels are displayed
-    version = 1 #// the version of RSAtrace3D for which this plugin was developed
+    built_in = False  # // please use False only
+    label = "template"  # // label name here
+    tool_tip = "Tips."  # // show this message when the mouse cursor hovers on the item
+    sublabels = [
+        "a",
+        "b",
+    ]  # // if you store multiple items in csv, please provide as many sub-labels as you want
+    index = 0  # // determines the order in which the labels are displayed
+    version = (
+        1  # // the version of RSAtrace3D for which this plugin was developed
+    )
 
-    #// the main function
+    # // the main function
     def calculate(self, RSA_vector: RSA_Vector, ID_string: ID_Object):
         """
-        The RSA_vector contains RSA vector data. 
+        The RSA_vector contains RSA vector data.
         The ID string is a unique string, with one ID for each node.
         Use these two arguments to compute the root trait and return the value.
 
@@ -29,7 +36,7 @@ class Root_Template(RootTraitBackbone):
         if ID_string.is_root():
             #// getting the root node
             root_node = RSA_vector.root_node(ID_string=ID_string)
-            
+
             ...
 
         #// voxel resolution can be obtained
@@ -38,19 +45,25 @@ class Root_Template(RootTraitBackbone):
         See angle.py, category.py, id_string.py, length.py, and position.py for examples.
         """
 
-        return ''
+        return ""
 
-#// an template for RSA trait measurements
-#// Create a class that inherits from RSATraitBackbone.
+
+# // an template for RSA trait measurements
+# // Create a class that inherits from RSATraitBackbone.
 class RSA_Template(RSATraitBackbone):
-    built_in = False #// please use False only
-    label = 'length [cm]' #// label name here
-    tool_tip = 'Tips.' #// Show this message when the mouse cursor hovers on the item
-    sublabels = ['a', 'b'] #// If you store multiple items in csv, please provide as many sub-labels as you want
-    index = 1 #// determines the order in which the labels are displayed
-    version = 1 #// The version of RSAtrace3D for which this plugin was developed
+    built_in = False  # // please use False only
+    label = "length [cm]"  # // label name here
+    tool_tip = "Tips."  # // Show this message when the mouse cursor hovers on the item
+    sublabels = [
+        "a",
+        "b",
+    ]  # // If you store multiple items in csv, please provide as many sub-labels as you want
+    index = 1  # // determines the order in which the labels are displayed
+    version = (
+        1  # // The version of RSAtrace3D for which this plugin was developed
+    )
 
-    #// the main function
+    # // the main function
     def calculate(self, RSA_vector: RSA_Vector):
         """
         Usage:
@@ -66,9 +79,10 @@ class RSA_Template(RSATraitBackbone):
 
         See angle.py, length.py, count.py, rdi.py, resolution.py, and volume_name.py for examples.
         """
-        return ''
+        return ""
 
-if __name__ == '__main__':
-    #// Debugging of the calculation can be performed with the following command.
+
+if __name__ == "__main__":
+    # // Debugging of the calculation can be performed with the following command.
     ModuleTest(Root_Template)
     ModuleTest(RSA_Template)

@@ -2,8 +2,8 @@
 
 ![python](https://img.shields.io/badge/Python->3.8-lightgreen)
 ![developed_by](https://img.shields.io/badge/developed%20by-Shota_Teramoto-lightgreen)
-![version](https://img.shields.io/badge/version-1.2-lightgreen)
-![last_updated](https://img.shields.io/badge/last_update-February_17,_2022-lightgreen)
+![version](https://img.shields.io/badge/version-1.3-lightgreen)
+![last_updated](https://img.shields.io/badge/last_update-August_12,_2022-lightgreen)
 
 ![GUI](./figures/RSAtrace3D.jpg) 
 
@@ -122,3 +122,5 @@ https://rootomics.dna.affrc.go.jp/en/
 * version 1.2 (February, 17, 2022)
   * adjust: behavior of close-up in the slice view
   * adjust: coding of some files
+* version 1.3 (August, 12, 2022)
+  * adjust: changed volume loading and saving behaviour

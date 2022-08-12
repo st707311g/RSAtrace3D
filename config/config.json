@@ -1,1 +1,4 @@
-{"resolution": 0.301, "interpolation": "COG tracking"}
+{
+   "resolution": 0.3,
+   "interpolation": "COG tracking"
+}

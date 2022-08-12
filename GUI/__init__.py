@@ -1,5 +1,7 @@
 from PyQt5.QtWidgets import QApplication
+
 from .components import QtMain
+
 
 def start():
     app = QApplication([])

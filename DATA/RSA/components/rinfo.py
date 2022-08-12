@@ -9,39 +9,44 @@ import numpy as np
 
 
 class RinfoFiles(object):
-    def __init__(self, files:List[str]=None):
+    def __init__(self, files: List[str] = None):
         self.files = files or []
 
     def list_files(self) -> List[str]:
         ret = []
         for f in sorted(self.files):
-            if os.path.isfile(f) and f.endswith('.rinfo'):
+            if os.path.isfile(f) and f.endswith(".rinfo"):
                 ret.append(f)
 
             if os.path.isdir(f):
-                rinfo_list = sorted(glob.glob(f'{f}/**/*.rinfo', recursive=True))
+                rinfo_list = sorted(
+                    glob.glob(f"{f}/**/*.rinfo", recursive=True)
+                )
                 ret.extend(rinfo_list)
 
         return ret
 
+
 class ID_Object(str):
     def __new__(cls, key: Union[str, list, tuple]):
         def __raise_exception():
-            raise Exception('The arguments must be a list or tuple of length 3, three numbers, or a string in ID_Object format.')
+            raise Exception(
+                "The arguments must be a list or tuple of length 3, three numbers, or a string in ID_Object format."
+            )
 
         if isinstance(key, str):
-            if key.count('-') != 2:
+            if key.count("-") != 2:
                 __raise_exception()
             return super().__new__(cls, *(key,))
         elif type(key) in [list, tuple]:
             if len(key) != 3:
                 __raise_exception()
-            ID_string = '-'.join([f'{i:02}' for i in key])
+            ID_string = "-".join([f"{i:02}" for i in key])
             return super(ID_Object, cls).__new__(cls, *(ID_string,))
         else:
-             __raise_exception()
+            __raise_exception()
 
-    def split(self, sep:str='-'):
+    def split(self, sep: str = "-"):
         return [int(it) for it in super().split(sep=sep)]
 
     def is_base(self):
@@ -73,6 +78,7 @@ class ID_Object(str):
     def relayID(self):
         return self.split()[2]
 
+
 class Node(list):
     def __init__(self):
         super().__init__()
@@ -82,16 +88,16 @@ class Node(list):
         return json.dumps(self.dictionary(), indent=1)
 
     def __eq__(self, other):
-        if other is None or not isinstance(other, Node): 
+        if other is None or not isinstance(other, Node):
             return False
-        
+
         return self is other
 
     def child_dictionary(self):
         return {child.ID: child.dictionary() for child in self}
 
     def dictionary(self):
-        dictionary = {'#annotations': self.annotations}
+        dictionary = {"#annotations": self.annotations}
         dictionary.update(self.child_dictionary())
         return dictionary
 
@@ -106,51 +112,54 @@ class Node(list):
     def child_count(self):
         return len(self)
 
+
 class _Annotations(dict):
     def __init__(self, *args, **kwargs):
         super().__init__()
         self.set_resolution(0.3)
-        self.update({'version': config.version_string()})
+        self.update({"version": config.version_string()})
 
     def set_resolution(self, resolution):
-        self.update({'resolution': resolution})
+        self.update({"resolution": resolution})
 
     def resolution(self) -> float:
-        return self.get('resolution', None)
+        return self.get("resolution", None)
 
     def set_interpolation(self, interpolation):
-        self.update({'interpolation': interpolation})
+        self.update({"interpolation": interpolation})
 
     def interpolation(self):
-        return self.get('interpolation', None)
+        return self.get("interpolation", None)
 
     def set_volume_shape(self, shape):
-        self.update({'volume shape': shape})
+        self.update({"volume shape": shape})
 
     def volume_shape(self):
-        return self.get('volume shape', None)
+        return self.get("volume shape", None)
 
     def set_volume_name(self, name):
-        self.update({'volume name': name})
+        self.update({"volume name": name})
 
     def volume_name(self):
-        return self.get('volume name', None)
+        return self.get("volume name", None)
 
     def import_from(self, info_dict: dict):
-        del info_dict['version']
+        del info_dict["version"]
         self.update(info_dict)
-        self['volume shape'] = tuple(self['volume shape'])
+        self["volume shape"] = tuple(self["volume shape"])
+
 
 class Polyline(list):
     pass
 
+
 class RelayNode(Node):
-    def __init__(self, ID: int, parent: 'RootNode', annotations: dict):
+    def __init__(self, ID: int, parent: "RootNode", annotations: dict):
         super().__init__()
         self.ID = ID
         self.__parent = parent
         self.annotations = annotations.copy()
-        self.annotations.update({'ID_string': self.ID_string()})
+        self.annotations.update({"ID_string": self.ID_string()})
 
     def __getitem__(self, key: str):
         for k, v in self.annotations.items():
@@ -179,13 +188,14 @@ class RelayNode(Node):
     def rootID(self):
         return self.root_node().ID
 
+
 class RootNode(Node):
-    def __init__(self, ID: int, parent: 'BaseNode', annotations: dict):
+    def __init__(self, ID: int, parent: "BaseNode", annotations: dict):
         super().__init__()
         self.ID = ID
         self.__parent = parent
         self.annotations = annotations.copy()
-        self.annotations.update({'ID_string': self.ID_string()})
+        self.annotations.update({"ID_string": self.ID_string()})
 
         self.__raw_polyline = []
         self.__interpolated_polyline = []
@@ -203,16 +213,20 @@ class RootNode(Node):
     def ID_string(self):
         return ID_Object([self.baseID(), self.ID, 0])
 
-    def append(self, annotations, relayID = None, interpolation=True):
+    def append(self, annotations, relayID=None, interpolation=True):
         relayID = relayID or self.next_id()
         node = RelayNode(relayID, parent=self, annotations=annotations)
         super().append(node)
         self.__update_registered_pos_list()
         if interpolation:
-            self.interpolate_polyline(interpolation_cls=self.RSA_vector().interpolation.get(label=self.RSA_vector().annotations.interpolation()))
+            self.interpolate_polyline(
+                interpolation_cls=self.RSA_vector().interpolation.get(
+                    label=self.RSA_vector().annotations.interpolation()
+                )
+            )
             self.complete_polyline()
         else:
-            self.__interpolated_polyline = self.annotations['polyline']
+            self.__interpolated_polyline = self.annotations["polyline"]
 
         return ID_Object(node.annotations["ID_string"])
 
@@ -228,7 +242,11 @@ class RootNode(Node):
     def remove(self, *args, **kwargs):
         super().remove(*args, **kwargs)
         self.__update_registered_pos_list()
-        self.interpolate_polyline(interpolation_cls=self.RSA_vector().interpolation.get(label=self.RSA_vector().annotations.interpolation()))
+        self.interpolate_polyline(
+            interpolation_cls=self.RSA_vector().interpolation.get(
+                label=self.RSA_vector().annotations.interpolation()
+            )
+        )
         self.complete_polyline()
 
     def delete(self):
@@ -239,21 +257,23 @@ class RootNode(Node):
         return self.base_node().ID
 
     def child_ID_strings(self):
-        return [node.annotations['ID_string'] for node in self]
+        return [node.annotations["ID_string"] for node in self]
 
     def __reorder_polyline(self, polyline: List[List[int]]):
         ordered = []
         ordered.append(polyline.pop(0))
-        while(len(polyline) != 0):
+        while len(polyline) != 0:
             ref_node = np.array(ordered[-1])
-            closest_index = np.argmin([np.sum((np.array(node)-ref_node)**2) for node in polyline])
+            closest_index = np.argmin(
+                [np.sum((np.array(node) - ref_node) ** 2) for node in polyline]
+            )
             ordered.append(polyline.pop(closest_index))
 
         return ordered
 
     def __update_registered_pos_list(self):
-        pos_list = [self.base_node()['coordinate']]
-        pos_list.extend([relay_node['coordinate'] for relay_node in self])
+        pos_list = [self.base_node()["coordinate"]]
+        pos_list.extend([relay_node["coordinate"] for relay_node in self])
 
         pos_list = [p for p in pos_list if p is not None]
 
@@ -264,8 +284,10 @@ class RootNode(Node):
         return self.base_node().parent().RSA_components()
 
     def interpolate_polyline(self, interpolation_cls):
-        self.__interpolated_polyline = interpolation_cls(self.RSA_components()).interpolate(self.__raw_polyline)
-        self.annotations.update({'polyline': self.__interpolated_polyline})
+        self.__interpolated_polyline = interpolation_cls(
+            self.RSA_components()
+        ).interpolate(self.__raw_polyline)
+        self.annotations.update({"polyline": self.__interpolated_polyline})
 
     def interpolated_polyline(self):
         return self.__interpolated_polyline
@@ -275,13 +297,24 @@ class RootNode(Node):
         polyline_node_count = len(polyline)
 
         def complete(node1: List[int], node2: List[int]):
-            max_dif: int = max([abs(n2-n1) for n1,n2 in zip(node1,node2)])
-            return np.transpose(np.stack([np.linspace(node1[i], node2[i], max_dif+1, dtype=np.int32) for i in range(3)])).tolist()
+            max_dif: int = max([abs(n2 - n1) for n1, n2 in zip(node1, node2)])
+            return np.transpose(
+                np.stack(
+                    [
+                        np.linspace(
+                            node1[i], node2[i], max_dif + 1, dtype=np.int32
+                        )
+                        for i in range(3)
+                    ]
+                )
+            ).tolist()
 
         self.__completed_polyline = Polyline()
-        
-        for i in range(polyline_node_count-1):
-            self.__completed_polyline.extend(complete(polyline[i], polyline[i+1]))
+
+        for i in range(polyline_node_count - 1):
+            self.__completed_polyline.extend(
+                complete(polyline[i], polyline[i + 1])
+            )
 
     def completed_polyline(self):
         return self.__completed_polyline
@@ -289,13 +322,14 @@ class RootNode(Node):
     def tip_coordinate(self):
         return self.__raw_polyline[-1]
 
+
 class BaseNode(Node):
-    def __init__(self, ID: int, parent: 'RSA_Vector', annotations: dict):
+    def __init__(self, ID: int, parent: "RSA_Vector", annotations: dict):
         super().__init__()
         self.ID = ID
         self.__parent = parent
         self.annotations = annotations.copy()
-        self.annotations.update({'ID_string': self.ID_string()})
+        self.annotations.update({"ID_string": self.ID_string()})
 
     def __getitem__(self, key: str):
         for k, v in self.annotations.items():
@@ -318,17 +352,18 @@ class BaseNode(Node):
 
         self.parent().remove(self)
 
-    def append(self, annotations:dict={}, rootID = None):
+    def append(self, annotations: dict = {}, rootID=None):
         rootID = rootID or self.next_id()
         node = RootNode(rootID, parent=self, annotations=annotations)
         super().append(node)
         return ID_Object(node.annotations["ID_string"])
 
     def child_ID_strings(self):
-        return [node['ID_string'] for node in self]
+        return [node["ID_string"] for node in self]
 
     def child_nodes(self) -> List[RootNode]:
         return [node for node in self]
+
 
 class RSA_Vector(Node):
     def __init__(self):
@@ -355,9 +390,9 @@ class RSA_Vector(Node):
         super().clear()
         self.annotations = _Annotations()
 
-    def append(self, annotations={}, baseID = None):
+    def append(self, annotations={}, baseID=None):
         if len(self) != 0:
-            raise Exception('Number of base should be 1.')
+            raise Exception("Number of base should be 1.")
 
         baseID = baseID or 1
         node = BaseNode(baseID, parent=self, annotations=annotations)
@@ -367,7 +402,9 @@ class RSA_Vector(Node):
     def base_node_count(self):
         return len(self)
 
-    def base_node(self, baseID: int = 1, ID_string: ID_Object = None) -> Union[BaseNode, None]:
+    def base_node(
+        self, baseID: int = 1, ID_string: ID_Object = None
+    ) -> Union[BaseNode, None]:
         if ID_string is not None:
             baseID, rootID, relayID = ID_string.split()
 
@@ -377,7 +414,9 @@ class RSA_Vector(Node):
 
         return None
 
-    def root_node(self, baseID: int = 1, rootID: int = 1, ID_string: ID_Object = None) -> Union[RootNode, None]:
+    def root_node(
+        self, baseID: int = 1, rootID: int = 1, ID_string: ID_Object = None
+    ) -> Union[RootNode, None]:
         if ID_string is not None:
             baseID, rootID, relayID = ID_string.split()
 
@@ -391,7 +430,13 @@ class RSA_Vector(Node):
 
         return None
 
-    def relay_node(self, baseID: int = 1, rootID: int = 1, relayID: int = 1, ID_string: ID_Object = None) -> Union[RelayNode, None]:
+    def relay_node(
+        self,
+        baseID: int = 1,
+        rootID: int = 1,
+        relayID: int = 1,
+        ID_string: ID_Object = None,
+    ) -> Union[RelayNode, None]:
         if ID_string is not None:
             baseID, rootID, relayID = ID_string.split()
 
@@ -402,20 +447,20 @@ class RSA_Vector(Node):
         for relay_node in root_node:
             if relay_node.ID == relayID:
                 return relay_node
-        
+
         return None
 
-    def append_base(self, annotations:dict={}):
+    def append_base(self, annotations: dict = {}):
         return self.append(annotations=annotations)
 
-    def append_root(self, baseID, annotations:dict={}):
+    def append_root(self, baseID, annotations: dict = {}):
         for base_node in self:
             if base_node.ID == baseID:
                 return base_node.append(annotations=annotations)
-        
+
         assert False
 
-    def append_relay(self, baseID, rootID, annotations:dict={}):
+    def append_relay(self, baseID, rootID, annotations: dict = {}):
         for base_node in self:
             if base_node.ID == baseID:
                 for root_node in base_node:
@@ -431,59 +476,85 @@ class RSA_Vector(Node):
         self.__RSA_components = RSA_components
 
     def load_from_file(self, fname: str):
-        with open(fname, 'r') as f:
+        with open(fname, "r") as f:
             trace_dict = json.load(f)
 
         return self.load_from_dict(trace_dict=trace_dict, file=fname)
 
-    def load_from_dict(self, trace_dict: dict = {}, file=''):
+    def load_from_dict(self, trace_dict: dict = {}, file=""):
         try:
-            general_annotations = trace_dict['#annotations']
+            general_annotations = trace_dict["#annotations"]
 
-            version, revision = config.parse_version_string(general_annotations['version'])
-            if version < config.version: 
-                self.logger.error(f'[Version error] {file}')
+            version, revision = config.parse_version_string(
+                general_annotations["version"]
+            )
+            if version < config.version:
+                self.logger.error(f"[Version error] {file}")
                 return False
 
             self.annotations.import_from(general_annotations)
 
-            baseID_list = sorted([int(k) for k in trace_dict.keys() if not k.startswith('#')])
+            baseID_list = sorted(
+                [int(k) for k in trace_dict.keys() if not k.startswith("#")]
+            )
 
             for baseID in baseID_list:
-                base_dict = trace_dict[f'{baseID}']
-                ID_string = ID_Object(base_dict['#annotations']['ID_string'])
-                self.append(annotations=base_dict['#annotations'], baseID=ID_string.baseID())
+                base_dict = trace_dict[f"{baseID}"]
+                ID_string = ID_Object(base_dict["#annotations"]["ID_string"])
+                self.append(
+                    annotations=base_dict["#annotations"],
+                    baseID=ID_string.baseID(),
+                )
                 base_node = self.base_node(ID_string=ID_string)
                 if base_node is None:
                     continue
-                rootID_list = sorted([int(k) for k in base_dict.keys() if not k.startswith('#')])
+                rootID_list = sorted(
+                    [int(k) for k in base_dict.keys() if not k.startswith("#")]
+                )
 
                 for rootID in rootID_list:
-                    root_dict = base_dict[f'{rootID}']
-                    ID_string = ID_Object(root_dict['#annotations']['ID_string'])
-                    base_node.append(annotations=root_dict['#annotations'], rootID=ID_string.rootID())
+                    root_dict = base_dict[f"{rootID}"]
+                    ID_string = ID_Object(
+                        root_dict["#annotations"]["ID_string"]
+                    )
+                    base_node.append(
+                        annotations=root_dict["#annotations"],
+                        rootID=ID_string.rootID(),
+                    )
                     root_node = self.root_node(ID_string=ID_string)
                     if root_node is None:
                         continue
-                    relayID_list = sorted([int(k) for k in root_dict.keys() if not k.startswith('#')])
+                    relayID_list = sorted(
+                        [
+                            int(k)
+                            for k in root_dict.keys()
+                            if not k.startswith("#")
+                        ]
+                    )
 
                     for relayID in relayID_list:
-                        relay_dict = root_dict[f'{relayID}']
-                        ID_string = ID_Object(relay_dict['#annotations']['ID_string'])
-                        root_node.append(annotations=relay_dict['#annotations'], interpolation=False, relayID=ID_string.relayID())
+                        relay_dict = root_dict[f"{relayID}"]
+                        ID_string = ID_Object(
+                            relay_dict["#annotations"]["ID_string"]
+                        )
+                        root_node.append(
+                            annotations=relay_dict["#annotations"],
+                            interpolation=False,
+                            relayID=ID_string.relayID(),
+                        )
 
                     root_node.complete_polyline()
 
-            self.logger.info(f'[Loading succeeded] {file}')
+            self.logger.info(f"[Loading succeeded] {file}")
             return True
         except:
-            self.logger.error(f'[Format error] {file}')
+            self.logger.error(f"[Format error] {file}")
             return False
 
     def save(self, rinfo_file_name: str):
         class encoder(json.JSONEncoder):
             def default(self, obj):
-                if isinstance(obj, np.integer): #type: ignore
+                if isinstance(obj, np.integer):  # type: ignore
                     return int(obj)
                 elif isinstance(obj, np.ndarray):
                     return obj.tolist()
@@ -491,12 +562,12 @@ class RSA_Vector(Node):
                     return super().default(obj)
 
         try:
-            with open(rinfo_file_name, 'w') as j:
+            with open(rinfo_file_name, "w") as j:
                 json.dump(self.dictionary(), j, cls=encoder)
-            self.logger.info(f'[Saving succeeded] {rinfo_file_name}')
+            self.logger.info(f"[Saving succeeded] {rinfo_file_name}")
             return True
         except:
-            self.logger.error(f'[Saving failed] {rinfo_file_name}')
+            self.logger.error(f"[Saving failed] {rinfo_file_name}")
             return False
 
     def iter_all(self) -> Generator[ID_Object, None, None]:
@@ -506,5 +577,3 @@ class RSA_Vector(Node):
                 yield root_node.ID_string()
                 for relay_node in root_node:
                     yield relay_node.ID_string()
-
-

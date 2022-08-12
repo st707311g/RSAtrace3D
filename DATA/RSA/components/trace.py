@@ -24,19 +24,27 @@ class Trace(object):
         self.projections = []
         self.histry = []
 
-        self.logger.debug('The trace data cleared.')
+        self.logger.debug("The trace data cleared.")
 
     def init_from_volume(self, volume):
         self.clear()
-        self.trace3D = TraceObject(shape=volume.shape, dimensions = [0,1,2], pen_size=3)
-        for dimensions in [[1,2],[0,2],[0,1]]:
-            self.projections.append(TraceObject(shape=volume.shape, dimensions = dimensions, pen_size=3))
+        self.trace3D = TraceObject(
+            shape=volume.shape, dimensions=[0, 1, 2], pen_size=3
+        )
+        for dimensions in [[1, 2], [0, 2], [0, 1]]:
+            self.projections.append(
+                TraceObject(
+                    shape=volume.shape, dimensions=dimensions, pen_size=3
+                )
+            )
 
-    def root_ndoes_to_be_updated(self, RSA_vector: RSA_Vector) -> List[RootNode]:
+    def root_ndoes_to_be_updated(
+        self, RSA_vector: RSA_Vector
+    ) -> List[RootNode]:
         modified = any([ref() is None for ID_string, ref in self.histry])
 
         if modified:
-            for trace_obj in [self.trace3D]+self.projections:
+            for trace_obj in [self.trace3D] + self.projections:
                 if trace_obj is not None:
                     trace_obj.clear()
             self.histry = []
@@ -58,12 +66,16 @@ class Trace(object):
     def draw_trace(self, root_node: RootNode):
         ID_string = root_node.ID_string()
         completed_polyline = root_node.completed_polyline()
-        for trace_obj in [self.trace3D]+self.projections:
+        for trace_obj in [self.trace3D] + self.projections:
             if trace_obj is not None:
-                trace_obj.draw_trace_single(completed_polyline, color=QColor('#8800ff00'))
+                trace_obj.draw_trace_single(
+                    completed_polyline, color=QColor("#8800ff00")
+                )
         self.histry.append([ID_string, weakref.ref(completed_polyline)])
 
-    def create_trace_object(self, RSA_vector: RSA_Vector, ID_string: ID_Object, **kwargs):
+    def create_trace_object(
+        self, RSA_vector: RSA_Vector, ID_string: ID_Object, **kwargs
+    ):
         trace_obj = TraceObject(**kwargs)
 
         if ID_string.is_base():
@@ -80,15 +92,18 @@ class Trace(object):
         completed_polyline = root_node.completed_polyline()
 
         if completed_polyline is not None:
-            trace_obj.draw_trace_single(completed_polyline, color=QColor('#ffffffff'))
+            trace_obj.draw_trace_single(
+                completed_polyline, color=QColor("#ffffffff")
+            )
 
         return trace_obj
-        
-class TraceObject():
-    def __init__(self, shape, dimensions = [0,1,2], pen_size=3):
+
+
+class TraceObject:
+    def __init__(self, shape, dimensions=[0, 1, 2], pen_size=3):
         self.dimensions = deepcopy(dimensions)
-        self.shape_full = tuple(shape+(4,))
-        self.shape = tuple([shape[d] for d in self.dimensions])+(4,)
+        self.shape_full = tuple(shape + (4,))
+        self.shape = tuple([shape[d] for d in self.dimensions]) + (4,)
         self.pen_size = pen_size
 
         self.clear()
@@ -97,19 +112,34 @@ class TraceObject():
         self.volume = np.zeros(self.shape, dtype=np.uint8)
 
     def get_slice_generator(self, polyline):
-        S = self.pen_size*2+1
+        S = self.pen_size * 2 + 1
 
         for pos in polyline:
-            #// skip invalid values
-            if any([pos[d]<0 or pos[d]>=self.shape_full[d] for d in range(3)]):
+            # // skip invalid values
+            if any(
+                [pos[d] < 0 or pos[d] >= self.shape_full[d] for d in range(3)]
+            ):
                 continue
-            
-            #// slices for cropping
+
+            # // slices for cropping
             slices = []
             pad_slices = []
             for d in range(3):
-                slices.append(slice(max(pos[d]-self.pen_size, 0), min(pos[d]+self.pen_size+1, self.shape_full[d])))
-                pad_slices.append(slice(-min(pos[d]-self.pen_size, 0), S+min(self.shape_full[d]-pos[d]-self.pen_size-1, 0)))
+                slices.append(
+                    slice(
+                        max(pos[d] - self.pen_size, 0),
+                        min(pos[d] + self.pen_size + 1, self.shape_full[d]),
+                    )
+                )
+                pad_slices.append(
+                    slice(
+                        -min(pos[d] - self.pen_size, 0),
+                        S
+                        + min(
+                            self.shape_full[d] - pos[d] - self.pen_size - 1, 0
+                        ),
+                    )
+                )
 
             not_index = [d for d in range(3) if d not in self.dimensions]
             for d in not_index:
@@ -118,12 +148,12 @@ class TraceObject():
 
             yield (slices, pad_slices)
 
-    def draw_trace(self, polyline, color=QColor('#ffffffff')):
+    def draw_trace(self, polyline, color=QColor("#ffffffff")):
         for slices, pad_slices in self.get_slice_generator(polyline=polyline):
             croped = self.volume[tuple(slices)]
-            pen = ball if len(self.dimensions)==3 else disk
+            pen = ball if len(self.dimensions) == 3 else disk
             pen = pen(self.pen_size)[tuple(pad_slices)]
-            m_ball = [pen*color for color in color.getRgb()]
+            m_ball = [pen * color for color in color.getRgb()]
             m_ball = np.stack(m_ball, axis=len(self.dimensions))
 
             croped = np.maximum(croped, m_ball)

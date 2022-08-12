@@ -1,11 +1,12 @@
-from PyQt5.QtGui import QStandardItem, QFont
-from DATA import RSA_Vector, ID_Object
 import config
+from DATA import ID_Object, RSA_Vector
+from PyQt5.QtGui import QFont, QStandardItem
+
 
 class RootTraitBackbone(object):
     class_type = "root"
     built_in = False
-    label = 'Label name'
+    label = "Label name"
     sublabels = []
     index = 0
     exportable = True
@@ -36,24 +37,29 @@ class RootTraitBackbone(object):
         self.item.setData(self)
 
         font = self.item.font()
-        font.setFamily('Monospace')
+        font.setFamily("Monospace")
         font.setStyleHint(QFont.Monospace)
         self.item.setFont(font)
-        
+
         return self.item
 
     @classmethod
     def check(cls):
         if cls.version < 0 or cls.version > config.version:
-            raise Exception(f'The RSAtrace version should be >= {cls.version}. (class name: {cls.__name__})')
+            raise Exception(
+                f"The RSAtrace version should be >= {cls.version}. (class name: {cls.__name__})"
+            )
         if cls.built_in == False:
             if cls.index < 0 or cls.index > 255:
-                raise Exception(f'The "index" should be >= 0 and <= 255. (class name: {cls.__name__})')
+                raise Exception(
+                    f'The "index" should be >= 0 and <= 255. (class name: {cls.__name__})'
+                )
+
 
 class RSATraitBackbone(object):
     class_type = "RSA"
     built_in = False
-    label = 'Label name'
+    label = "Label name"
     sublabels = []
     index = 0
     exportable = True
@@ -82,7 +88,7 @@ class RSATraitBackbone(object):
         self.item.setEditable(False)
 
         font = self.item.font()
-        font.setFamily('Monospace')
+        font.setFamily("Monospace")
         font.setStyleHint(QFont.Monospace)
         self.item.setFont(font)
 
@@ -91,7 +97,11 @@ class RSATraitBackbone(object):
     @classmethod
     def check(cls):
         if cls.version < 0 or cls.version > config.version:
-            raise Exception(f'The RSAtrace version should be >= {cls.version}. (class name: {cls.__name__})')
+            raise Exception(
+                f"The RSAtrace version should be >= {cls.version}. (class name: {cls.__name__})"
+            )
         if cls.built_in == False:
             if cls.index < 0 or cls.index > 255:
-                raise Exception(f'The "index" should be >= 0 and <= 255. (class name: {cls.__name__})')
+                raise Exception(
+                    f'The "index" should be >= 0 and <= 255. (class name: {cls.__name__})'
+                )
