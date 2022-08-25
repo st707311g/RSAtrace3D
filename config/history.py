@@ -81,11 +81,18 @@ class History:
     def update_menu(self):
         self.menu.clear()
         for name in self.iter_reverse():
+            volume_path: str = str(name)
             act = QAction(
-                text=name, parent=self.parent, triggered=self.triggered
+                text=volume_path, parent=self.parent, triggered=self.triggered
             )
-            act.setData(name)
-            act.setEnabled(os.path.isdir(name))
+            act.setData(volume_path)
+            act.setEnabled(
+                os.path.isdir(volume_path)
+                or (
+                    os.path.isfile(volume_path)
+                    and volume_path.lower().endswith(".tar.gz")
+                )
+            )
             self.menu.addAction(act)
 
         return self.menu

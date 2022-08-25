@@ -2,10 +2,10 @@
 
 ![python](https://img.shields.io/badge/Python->3.8-lightgreen)
 ![developed_by](https://img.shields.io/badge/developed%20by-Shota_Teramoto-lightgreen)
-![version](https://img.shields.io/badge/version-1.3-lightgreen)
-![last_updated](https://img.shields.io/badge/last_update-August_12,_2022-lightgreen)
+![version](https://img.shields.io/badge/version-1.4-lightgreen)
+![last_updated](https://img.shields.io/badge/last_update-August_25,_2022-lightgreen)
 
-![GUI](./figures/RSAtrace3D.jpg) 
+![GUI](./figures/RSAtrace3D.jpg)
 
 ## introduction
 
@@ -124,3 +124,5 @@ https://rootomics.dna.affrc.go.jp/en/
   * adjust: coding of some files
 * version 1.3 (August, 12, 2022)
   * adjust: changed volume loading and saving behaviour
+* version 1.4 (August, 25, 2022)
+  * update: supports tar.gz volume files

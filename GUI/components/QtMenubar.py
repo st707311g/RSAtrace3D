@@ -162,13 +162,13 @@ class QtMenubar(QMenuBar):
         if directory == "":
             return False
 
-        self.parent().load_from(directory=directory)
+        self.parent().load_from(volume_path=directory)
 
     def on_menu_history(self):
         obj = QObject.sender(self)
         name = obj.data()
 
-        self.parent().load_from(directory=name)
+        self.parent().load_from(volume_path=name)
 
     def on_act_close_volume(self):
         self.parent().close_volume()
@@ -218,9 +218,9 @@ class QtMenubar(QMenuBar):
                     out_image * (1 - alpha) + trace_image[..., 0:3] * alpha,
                     dtype=np.uint8,
                 ).transpose(1, 0, 2)
-                out_file = f"{self.RSA_components().file.directory}_projection{i+1}.png"
+                out_file = f"{self.RSA_components().file.volume_stem}_projection{i+1}.png"
 
-                imageio.imsave(out_file, out_image)
+                imageio.imwrite(out_file, out_image)
                 self.logger.info(f"[Saving succeeded] {out_file}")
         except:
             self.logger.error(f"[Saving failed]")

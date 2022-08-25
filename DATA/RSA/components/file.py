@@ -1,42 +1,39 @@
 import os
+from pathlib import Path
+
+from st_modules.volume import VolumeLoader
 
 
 class File(object):
-    def __init__(self, volume_directory: str = ""):
+    def __init__(self, volume_path: str = ""):
         super().__init__()
         self.clear()
-        if volume_directory != "":
-            self.set(directory=volume_directory)
+        if volume_path != "":
+            self.set(volume_path=volume_path)
 
     def clear(self):
-        self.directory = ""
-        self.rinfo_file = ""
+        self.volume_path = Path("")
+        self.rinfo_file = Path("")
 
     def extensions(self):
         return (".cb", ".png", ".tif", ".tiff", ".jpg", ".jpeg")
 
-    def set(self, directory: str):
-        self.directory = directory
-        self.rinfo_file = self.directory + ".rinfo"
-        self.root_traits_file = self.directory + "_root_traits.csv"
-        self.trace_directory = self.directory + "_trace"
-        self.volume = os.path.basename(self.directory)
+    def set(self, volume_path: str):
+        self.volume_path = Path(volume_path)
+        if self.volume_path.is_dir():
+            self.volume_stem = self.volume_path
+        else:
 
-        self.img_files = [
-            os.path.join(self.directory, f) for f in os.listdir(self.directory)
-        ]
-        ext_count = []
-        for ext in self.extensions():
-            ext_count.append(
-                len([f for f in self.img_files if f.lower().endswith(ext)])
+            self.volume_stem = Path(
+                self.volume_path.parent,
+                self.volume_path.name[: self.volume_path.name.index(".")],
             )
-
-        target_ext = self.extensions()[ext_count.index(max(ext_count))]
-
-        self.img_files = [
-            f for f in self.img_files if f.lower().endswith(target_ext)
-        ]
-        self.img_files.sort()
+        self.rinfo_file = Path(str(self.volume_stem) + ".rinfo")
+        self.root_traits_file = Path(
+            str(self.volume_stem) + "_root_traits.csv"
+        )
+        self.trace_directory = Path(str(self.volume_stem) + "_trace")
+        self.volume_name = self.volume_stem.name
 
     def is_rinfo_file_available(self):
         return os.path.isfile(self.rinfo_file)
@@ -50,3 +47,6 @@ class File(object):
 
 if __name__ == "__main__":
     pass
+
+    a = Path("/media/teramotos154/no3/wrc/wrc_control/14das/001.tar.gz")
+    str(Path(a.parent, a.name[: a.name.index(".")]))

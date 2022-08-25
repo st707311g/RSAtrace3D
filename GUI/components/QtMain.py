@@ -132,37 +132,48 @@ class QtMain(QMainWindow):
 
         flist = [u.toLocalFile() for u in ev.mimeData().urls()]
 
-        if len(flist) != 1 or not os.path.isdir(flist[0]):
-            self.logger.error("Only 1 directory at once is acceptable.")
+        if len(flist) != 1:
+            self.logger.error("Only 1 volume path at once is acceptable.")
             return
 
-        self.load_from(directory=flist[0])
+        volume_path: str = flist[0]
 
-    def load_from(self, directory: str, rinfo_dict: dict = {}):
+        if os.path.isdir(flist[0]):
+            self.load_from(volume_path=volume_path)
+        elif os.path.isfile(volume_path) and volume_path.lower().endswith(
+            ".tar.gz"
+        ):
+            self.load_from(volume_path=volume_path)
+        else:
+            self.logger.error(f"{volume_path} is not loadable.")
+
+        return
+
+    def load_from(self, volume_path: str, rinfo_dict: dict = {}):
         self.set_control(locked=True)
         self.volume_loader = QtVolumeLoader(
-            volume_path=directory,
+            volume_path=volume_path,
             progressbar_signal=self.GUI_components().statusbar.pyqtSignal_update_progressbar,
         )
 
         if not self.volume_loader.is_valid_volume():
-            self.logger.error(f"[Loading error] {directory}")
+            self.logger.error(f"[Loading error] {volume_path}")
             self.set_control(locked=False)
             return False
 
-        VolumeFile = File(volume_directory=directory)
+        VolumeFile = File(volume_path=volume_path)
         self.rinfo_dict = rinfo_dict
         self.close_volume()
         self.RSA_components().file = VolumeFile
 
         self.volume_loader.finished.connect(self.on_volume_loaded)
         self.volume_loader.start()
-        self.GUI_components().menubar.history.add(directory)
+        self.GUI_components().menubar.history.add(volume_path)
         self.GUI_components().menubar.history.update_menu()
 
     def on_volume_loaded(self):
-        volume_path = Path(self.RSA_components().file.directory)
-        self.set_volume_name(volume_path.stem)
+        file_instance = self.RSA_components().file
+        self.set_volume_name(file_instance.volume_name)
 
         volume3d = self.volume_loader.data()
         self.set_resolution(volume3d.mm_resolution)
@@ -171,7 +182,7 @@ class QtMain(QMainWindow):
         del self.volume_loader
 
         self.logger.info(
-            f"[Loading succeeded] {self.RSA_components().file.directory}"
+            f"[Loading succeeded] {self.RSA_components().file.volume_path}"
         )
 
         self.RSA_components().volume.init_from_volume(volume=volume)
@@ -370,8 +381,8 @@ class QtMain(QMainWindow):
     def setWindowTitle(self):
         text = f"RSAtrace3D (version {config.version_string()})"
         if not self.RSA_components().volume.is_empty():
-            dir_name = self.RSA_components().file.volume
-            text = f"{text} - {dir_name}"
+            volume_path = self.RSA_components().file.volume_path
+            text = f"{text} - {volume_path}"
         super().setWindowTitle(text)
 
 
