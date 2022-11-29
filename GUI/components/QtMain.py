@@ -217,7 +217,9 @@ class QtMain(QMainWindow):
                 )
 
         if loaded == False:
-            self.set_volume_name(volume_name=self.RSA_components().file.volume)
+            self.set_volume_name(
+                volume_name=self.RSA_components().file.volume_path
+            )
 
             interpolation = self.RSA_components().vector.interpolation
             self.RSA_components().vector.annotations.set_interpolation(
@@ -367,7 +369,7 @@ class QtMain(QMainWindow):
         self.GUI_components().statusbar.set_main_message(msg)
 
     def set_volume_name(self, volume_name):
-        self.GUI_components().toolbar.volumename_edit.setText(volume_name)
+        self.GUI_components().toolbar.volumename_edit.setText(str(volume_name))
         self.RSA_components().vector.annotations.set_volume_name(
             name=volume_name
         )
