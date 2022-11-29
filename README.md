@@ -126,3 +126,4 @@ https://rootomics.dna.affrc.go.jp/en/
   * adjust: changed volume loading and saving behaviour
 * version 1.4 (August, 25, 2022)
   * update: supports tar.gz volume files
+  * fix: types of string (November, 29, 2022)
