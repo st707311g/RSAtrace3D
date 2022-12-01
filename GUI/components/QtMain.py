@@ -218,7 +218,7 @@ class QtMain(QMainWindow):
 
         if loaded == False:
             self.set_volume_name(
-                volume_name=self.RSA_components().file.volume_path
+                volume_name=self.RSA_components().file.volume_name
             )
 
             interpolation = self.RSA_components().vector.interpolation
