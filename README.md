@@ -130,3 +130,4 @@ https://rootomics.dna.affrc.go.jp/en/
 * version 1.5 (December 1, 2022)
   * update: `st_modules`
   * support: pyqgraph latest version (0.13.1)
+  * support: pyqgraph latest version (5.15.7)
