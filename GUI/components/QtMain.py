@@ -218,7 +218,7 @@ class QtMain(QMainWindow):
 
         if loaded == False:
             self.set_volume_name(
-                volume_name=self.RSA_components().file.volume_path
+                volume_name=self.RSA_components().file.volume_name
             )
 
             interpolation = self.RSA_components().vector.interpolation
@@ -396,7 +396,7 @@ class QtVolumeLoader(QThread, VolumeLoader):
 
     def run(self):
         for i, total in self.load_files_iterably():
-            self.progressbar_signal.emit(i, total, "File loading")
+            self.progressbar_signal.emit(i + 1, total, "File loading")
 
         self.quit()
 

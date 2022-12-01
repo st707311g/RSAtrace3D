@@ -19,11 +19,10 @@ class File(object):
         return (".cb", ".png", ".tif", ".tiff", ".jpg", ".jpeg")
 
     def set(self, volume_path: str):
-        self.volume_path = Path(volume_path)
+        self.volume_path = Path(volume_path).resolve()
         if self.volume_path.is_dir():
             self.volume_stem = self.volume_path
         else:
-
             self.volume_stem = Path(
                 self.volume_path.parent,
                 self.volume_path.name[: self.volume_path.name.index(".")],

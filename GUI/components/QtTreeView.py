@@ -4,8 +4,13 @@ import pandas as pd
 from DATA import ID_Object, RSA_Components
 from DATA.RSA.components.rinfo import ID_Object
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QAbstractItemView, QStandardItemModel
+from PyQt5.QtGui import QStandardItemModel
 from PyQt5.QtWidgets import QHeaderView, QTreeView
+
+try:
+    from PyQt5.QtGui import QAbstractItemView
+except:
+    from PyQt5.QtWidgets import QAbstractItemView
 
 
 class TreeViewHeader(QHeaderView):

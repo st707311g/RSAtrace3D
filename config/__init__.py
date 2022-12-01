@@ -5,7 +5,7 @@ from .history import History
 
 application_name = "RSAtrace3D"
 version = 1
-revision = 4
+revision = 5
 
 
 def version_string():

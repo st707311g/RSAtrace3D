@@ -1,5 +1,5 @@
-PyQt5 == 5.14.2
-pyqtgraph == 0.12.1
+PyQt5>=5.15, <5.16
+pyqtgraph>=0.13, <0.14
 scikit-image
 psutil
 pandas

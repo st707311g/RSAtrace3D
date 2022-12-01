@@ -15,10 +15,14 @@ from pyqtgraph import (
     Point,
     TextItem,
     ViewBox,
-    fn,
     mkBrush,
     mkPen,
 )
+
+try:
+    from pyqtgraph import fu
+except:
+    from pyqtgraph import functions as fn
 
 
 class _ImageViewBox(ViewBox):
@@ -46,21 +50,12 @@ class _ImageViewBox(ViewBox):
         self.sigRangeChangedManually.emit(mask)
 
 
-class _ImageItem3D(ImageItem):
-    def __init__(self):
-        super().__init__()
-
-    def getHistogram(self, **kwds):
-        return super().getHistogram(bins=64, **kwds)
-
-
 class QtSliceView(ImageView):
     def __init__(self, parent: QtMain):
         super().__init__(
             **{
                 "parent": parent,
                 "view": _ImageViewBox(),
-                "imageItem": _ImageItem3D(),
             }
         )
         self.logger = logging.getLogger(self.__class__.__name__)
