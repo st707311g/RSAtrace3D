@@ -129,3 +129,4 @@ https://rootomics.dna.affrc.go.jp/en/
   * fix: types of string (November 29, 2022)
 * version 1.5 (December 1, 2022)
   * update: `st_modules`
+  * support: pyqgraph latest version (0.13.1)
