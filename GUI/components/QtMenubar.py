@@ -252,7 +252,7 @@ class QtMenubar(QMenuBar):
             for i, total in volume_saver.save_files_iterably(
                 destination_directory=trace_directory, extension="png"
             ):
-                progressbar_signal.emit(i, total, "File saving")
+                progressbar_signal.emit(i + 1, total, "File saving")
 
             self.logger.info(f"[Saving succeeded] {trace_directory}")
         except:

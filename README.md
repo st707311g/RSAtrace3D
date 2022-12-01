@@ -2,8 +2,8 @@
 
 ![python](https://img.shields.io/badge/Python->3.8-lightgreen)
 ![developed_by](https://img.shields.io/badge/developed%20by-Shota_Teramoto-lightgreen)
-![version](https://img.shields.io/badge/version-1.4-lightgreen)
-![last_updated](https://img.shields.io/badge/last_update-August_25,_2022-lightgreen)
+![version](https://img.shields.io/badge/version-1.5-lightgreen)
+![last_updated](https://img.shields.io/badge/last_update-December_1,_2022-lightgreen)
 
 ![GUI](./figures/RSAtrace3D.jpg)
 
@@ -118,12 +118,14 @@ https://rootomics.dna.affrc.go.jp/en/
   * fix: behavior when the spacebar is pressed
   * fix: running the program under Windows 10 (July 15, 2021)
   * fix: importing mod modules (August 11, 2021)
-  * adjust: coding of some files (September, 3, 2021)
-* version 1.2 (February, 17, 2022)
+  * adjust: coding of some files (September 3, 2021)
+* version 1.2 (February 17, 2022)
   * adjust: behavior of close-up in the slice view
   * adjust: coding of some files
-* version 1.3 (August, 12, 2022)
+* version 1.3 (August 12, 2022)
   * adjust: changed volume loading and saving behaviour
-* version 1.4 (August, 25, 2022)
+* version 1.4 (August 25, 2022)
   * update: supports tar.gz volume files
-  * fix: types of string (November, 29, 2022)
+  * fix: types of string (November 29, 2022)
+* version 1.5 (December 1, 2022)
+  * update: `st_modules`

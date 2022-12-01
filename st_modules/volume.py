@@ -1,3 +1,14 @@
+"""Functions for 3D volume handling
+
+Author:
+    Shota Teramoto (st707311g@gmail.com)
+
+Licence:
+    NARO NON-COMMERCIAL LICENSE AGREEMENT Version 1.0
+
+"""
+
+import itertools
 import json
 import logging
 import os
@@ -6,23 +17,30 @@ from dataclasses import dataclass, field
 from operator import attrgetter
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Final, Generator, Tuple
+from typing import Final, Generator, List, Tuple
 
-import imageio.v3 as imageio
 import numpy as np
+from skimage import io
 
 VOLUME_INFO_FILE_NAME: Final[str] = ".volume_info.json"
 
 
-@dataclass
 class Volume3D(object):
-    np_volume: np.ndarray
-    mm_resolution: float = None
+    """
+    A class for handling a 3D volume.
 
-    def __post_init__(self):
+    Args:
+        np_volume (np.ndarray): 3D volume data. Only grayscale images are acceptable.
+        mm_resolution (float, optional): Spatioal resolution of np_volume.
+    """
+
+    def __init__(
+        self, np_volume: np.ndarray, mm_resolution: float = 0
+    ) -> None:
+        self.np_volume = np_volume
+        self.mm_resolution = mm_resolution
+
         assert self.is_valid_volume_shape()
-        if self.mm_resolution:
-            assert self.mm_resolution > 0
 
     def is_valid_volume_shape(self):
         return len(self.np_volume.shape) == 3
@@ -37,15 +55,44 @@ class Volume3D(object):
 
     @property
     def information_dict(self):
+        """
+        Return the dictionary object, including information of the 3D volume.
+        """
         return_dict = {}
         if self.mm_resolution:
             return_dict.update({"mm_resolution": self.mm_resolution})
 
         return return_dict
 
+    def astype(self, dtype):
+        return Volume3D(
+            np_volume=self.np_volume.astype(dtype),
+            mm_resolution=self.mm_resolution,
+        )
+
+    @property
+    def mm_resolution(self):
+        return self.__mm_resolution
+
+    @mm_resolution.setter
+    def mm_resolution(self, value):
+        assert value >= 0
+        self.__mm_resolution = value
+
+    def __repr__(self) -> str:
+        return {
+            "shape": self.shape,
+            "dtype": self.dtype,
+            "mm_resolution": self.mm_resolution,
+        }.__str__()
+
 
 @dataclass
 class VolumeLoader(object):
+    """
+    A class for 3D volume loading.
+    """
+
     volume_path: Final[str]
     minimum_file_number: Final[int] = 64
     extensions: Final[Tuple] = (
@@ -56,7 +103,6 @@ class VolumeLoader(object):
         ".jpg",
         ".jpeg",
     )
-    logger: logging.Logger = field(default=None, repr=False)
     volume_info_file_name: Final[str] = VOLUME_INFO_FILE_NAME
 
     @property
@@ -64,11 +110,11 @@ class VolumeLoader(object):
         return {"mm_resolution": 0.3}
 
     def __post_init__(self):
-        self.logger = self.logger or logging.getLogger(self.__class__.__name__)
-
         assert os.path.isdir(self.volume_path) or os.path.isfile(
             self.volume_path
         )
+
+        self.volume_path = str(self.volume_path)
 
         if os.path.isfile(self.volume_path):
             assert self.volume_path.endswith(".tar.gz")
@@ -106,15 +152,13 @@ class VolumeLoader(object):
         return self.image_file_number >= self.minimum_file_number
 
     def load_files_iterably(self):
-        self.logger.info(f"Loading image files: {self.volume_path}")
-
         volume_information = self.DEFAULT_VOLUME_INFORMATION
         image_list = []
         image_file_number = self.image_file_number
         if os.path.isdir(self.volume_path):
             for i, image_file_path in enumerate(self.image_file_list):
-                image_list.append(imageio.imread(image_file_path))
-                yield i + 1, image_file_number
+                image_list.append(io.imread(image_file_path))
+                yield i, image_file_number
 
             volume_info_path = Path(
                 self.volume_path, self.volume_info_file_name
@@ -137,8 +181,8 @@ class VolumeLoader(object):
 
                 info_list.sort(key=attrgetter("name"))
                 for i, info in enumerate(info_list):
-                    image_list.append(imageio.imread(tar.extractfile(info)))
-                    yield i + 1, len(info_list)
+                    image_list.append(io.imread(tar.extractfile(info)))
+                    yield i, len(info_list)
 
         else:
             assert False
@@ -154,14 +198,15 @@ class VolumeLoader(object):
 
 @dataclass
 class VolumeSaver(object):
+    """
+    A class for 3D volume saving.
+    """
+
     volume3d: Final[Volume3D]
-    logger: logging.Logger = field(default=None, repr=False)
     digits: Final[int] = 4
     volume_info_file_name: Final[str] = VOLUME_INFO_FILE_NAME
 
     def __post_init__(self):
-        self.logger = self.logger or logging.getLogger(self.__class__.__name__)
-
         assert self.is_valid_volume_dtype()
         assert self.is_valid_volume_shape()
         assert self.digits > 0
@@ -185,16 +230,13 @@ class VolumeSaver(object):
         destination_directory_path = Path(destination_directory)
         os.makedirs(destination_directory_path, exist_ok=True)
 
-        self.logger.info(
-            f"Saving {self.np_volume.shape[0]} image files: {destination_directory_path}"
-        )
         for i, img in enumerate(self.slice_generator):
             image_file_path = Path(
                 destination_directory_path,
                 f"img{str(i).zfill(self.digits)}.{extension}",
             )
-            imageio.imwrite(image_file_path, img)
-            yield i + 1, len(self.np_volume)
+            io.imsave(image_file_path, img)
+            yield i, len(self.np_volume)
 
         with open(
             Path(destination_directory_path, self.volume_info_file_name), "w"
@@ -204,6 +246,7 @@ class VolumeSaver(object):
     def save_volume_as_archive_iterably(
         self, archive_path: str, extension="jpg"
     ):
+        archive_path = str(archive_path)
         if not archive_path.lower().endswith(".tar.gz"):
             archive_path += ".tar.gz"
 
@@ -224,3 +267,118 @@ class VolumeSaver(object):
                     tar.add(f)
 
                 os.chdir(cwd)
+
+
+@dataclass
+class VolumeSeparator(object):
+    """
+    A class for 3D volume separating and assembling.
+    """
+
+    volume3d: Volume3D
+    logger: logging.Logger = field(default=None, repr=False)
+    block_size: Tuple[int] = (64, 64, 64)
+    overlap: int = 8
+
+    def __post_init__(self):
+        assert min(self.block_size) > 8
+        self.logger = self.logger or logging.getLogger(self.__class__.__name__)
+
+        self.logger.debug(f"a class constructed: {self.__class__.__name__}")
+        self.logger.debug(f"{self.volume3d.shape=}")
+        self.logger.debug(f"{self.block_size=}")
+        self.logger.debug(f"{self.padding_size=}")
+        self.logger.debug(f"{self.padded_image_shape=}")
+
+    @property
+    def adjusted_block_size(self):
+        return tuple([size - self.overlap * 2 for size in self.block_size])
+
+    @property
+    def padding_size(self):
+        padding_size = tuple(
+            [
+                int(
+                    np.ceil(
+                        self.volume3d.shape[i] / self.adjusted_block_size[i]
+                    )
+                )
+                * self.adjusted_block_size[i]
+                - self.volume3d.shape[i]
+                for i in range(3)
+            ]
+        )
+        return tuple([(self.overlap, _ + self.overlap) for _ in padding_size])
+
+    @property
+    def padded_image_shape(self):
+        return tuple(
+            [
+                self.volume3d.shape[i] + sum(self.padding_size[i])
+                for i in range(3)
+            ]
+        )
+
+    def get_separated_volumes(self) -> List[np.ndarray]:
+        img = self.volume3d.np_volume.copy()
+        img = np.pad(img, self.padding_size, mode="reflect")
+
+        separated_images = []
+        range_list = [
+            range(img.shape[i] // self.adjusted_block_size[i])
+            for i in range(3)
+        ]
+        for zi, yi, xi in itertools.product(*range_list):
+            index_list = [zi, yi, xi]
+            slice_list = [
+                slice(
+                    index_list[i] * self.adjusted_block_size[i],
+                    (index_list[i] + 1) * self.adjusted_block_size[i]
+                    + self.overlap * 2,
+                )
+                for i in range(3)
+            ]
+            cropped_image = img[tuple(slice_list)]
+            separated_images.append(cropped_image)
+
+        self.logger.debug(f"number of image tiles: {len(separated_images)}")
+
+        return separated_images
+
+    def get_assembled_volume(self, separated_volume_list: List[np.ndarray]):
+        output_volume = np.zeros(self.padded_image_shape, dtype=np.uint8)
+
+        i = 0
+        range_list = [
+            range(output_volume.shape[i] // self.adjusted_block_size[i])
+            for i in range(3)
+        ]
+        for zi, yi, xi in itertools.product(*range_list):
+            index_list = [zi, yi, xi]
+            slice_list = [
+                slice(
+                    index_list[i] * self.adjusted_block_size[i] + self.overlap,
+                    (index_list[i] + 1) * self.adjusted_block_size[i]
+                    + self.overlap,
+                )
+                for i in range(3)
+            ]
+            output_volume[tuple(slice_list)] = separated_volume_list[i][
+                self.overlap : -self.overlap,
+                self.overlap : -self.overlap,
+                self.overlap : -self.overlap,
+            ]
+            i += 1
+
+        output_volume = output_volume[
+            tuple(
+                [
+                    slice(self.padding_size[d][0], -self.padding_size[d][1])
+                    for d in range(3)
+                ]
+            )
+        ]
+        volume3d = Volume3D(
+            np_volume=output_volume, mm_resolution=self.volume3d.mm_resolution
+        )
+        return volume3d

@@ -396,7 +396,7 @@ class QtVolumeLoader(QThread, VolumeLoader):
 
     def run(self):
         for i, total in self.load_files_iterably():
-            self.progressbar_signal.emit(i, total, "File loading")
+            self.progressbar_signal.emit(i + 1, total, "File loading")
 
         self.quit()
 
