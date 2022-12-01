@@ -8,66 +8,116 @@ Licence:
 
 """
 
+# todo
+# VolumeLoader SBIファイルに対応
+
+
 import os
 import unittest
+from copy import deepcopy
 from glob import glob
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import List
 
 import numpy as np
+import open3d as o3d
 
 from volume import Volume3D, VolumeLoader, VolumeSaver, VolumeSeparator
 
 
-class TestVolume3D(unittest.TestCase):
-    def setUp(self):
-        self.np_volume_for_test = np.random.randint(
-            0, 255, size=(128, 64, 32), dtype=np.uint8
-        )
-        self.mm_resolution_for_test = np.random.rand()
+def get_np_volume_test_data():
+    return np.random.randint(0, 255, size=(128, 64, 32), dtype=np.uint8)
 
-    def test_resolution(self):
-        volume3d = Volume3D(
-            np_volume=self.np_volume_for_test,
-            mm_resolution=self.mm_resolution_for_test,
+
+def get_mm_resolution_test_data():
+    return np.random.rand()
+
+
+def get_point_cloud_test_data():
+    xyz = []
+    for _ in range(64):
+        xyz.append(
+            [
+                np.random.randint(0, 127),
+                np.random.randint(0, 63),
+                np.random.randint(0, 31),
+            ]
         )
-        self.assertEqual(volume3d.mm_resolution, self.mm_resolution_for_test)
+
+    xyz = np.array(xyz)
+    point_cloud_data = o3d.geometry.PointCloud()
+    point_cloud_data.points = o3d.utility.Vector3dVector(xyz)
+
+    return point_cloud_data
+
+
+def get_Volume3D_test_data(
+    np_volume: np.ndarray = get_np_volume_test_data(),
+    mm_resolution: float = np.random.rand(),
+    point_cloud=get_point_cloud_test_data(),
+):
+    volume3d = Volume3D(
+        np_volume=np_volume,
+        mm_resolution=mm_resolution,
+        point_cloud=point_cloud,
+    )
+
+    return volume3d
+
+
+class TestVolume3D(unittest.TestCase):
+    def test_resolution(self):
+        mm_resolution = get_mm_resolution_test_data()
+        volume3d = get_Volume3D_test_data(mm_resolution=mm_resolution)
+
+        self.assertEqual(volume3d.mm_resolution, mm_resolution)
 
         with self.assertRaises(AssertionError):
-            volume3d = Volume3D(
-                np_volume=self.np_volume_for_test,
-                mm_resolution=-1,
-            )
+            get_Volume3D_test_data(mm_resolution=-1)
 
         with self.assertRaises(AssertionError):
             volume3d.mm_resolution = -1
 
     def test_shape(self):
-        volume3d = Volume3D(
-            np_volume=self.np_volume_for_test,
-            mm_resolution=self.mm_resolution_for_test,
-        )
-        self.assertEqual(volume3d.shape, self.np_volume_for_test.shape)
+        np_volume = get_np_volume_test_data()
+        volume3d = get_Volume3D_test_data(np_volume=np_volume)
+
+        self.assertEqual(volume3d.shape, np_volume.shape)
 
         with self.assertRaises(AssertionError):
-            volume3d = Volume3D(
-                np_volume=self.np_volume_for_test.reshape(
-                    self.np_volume_for_test.shape + (1,)
-                ),
-                mm_resolution=self.mm_resolution_for_test,
+            get_Volume3D_test_data(
+                np_volume=np_volume.reshape(np_volume.shape + (1,))
             )
+
+    def test_equal(self):
+        volume3d_1 = get_Volume3D_test_data()
+        volume3d_2 = deepcopy(volume3d_1)
+        volume3d_2.mm_resolution /= 2
+
+        volume3d_3 = deepcopy(volume3d_1)
+        volume3d_3.np_volume = volume3d_3.np_volume // 2
+
+        volume3d_4 = deepcopy(volume3d_1)
+        volume3d_4.point_cloud.points = o3d.utility.Vector3dVector(
+            np.asarray(volume3d_3.point_cloud.points) // 2
+        )
+
+        self.assertTrue(volume3d_1 == volume3d_1)
+        self.assertFalse(volume3d_1 == volume3d_2)
+        self.assertFalse(volume3d_1 == volume3d_3)
+        self.assertFalse(volume3d_1 == volume3d_4)
+
+        self.assertFalse(volume3d_1 != volume3d_1)
+        self.assertTrue(volume3d_1 != volume3d_2)
+        self.assertTrue(volume3d_1 != volume3d_3)
+        self.assertTrue(volume3d_1 != volume3d_4)
 
 
 class TestVolumeLoader(unittest.TestCase):
     def setUp(self):
         # // making test volume
-        self.test_volume3d_instance = Volume3D(
-            np_volume=np.random.randint(
-                0, 255, size=(128, 64, 32), dtype=np.uint8
-            ),
-            mm_resolution=0.3,
-        )
+        self.test_volume3d_instance = get_Volume3D_test_data()
 
         # // making temporary directory
         self.temporary_directory_p = TemporaryDirectory()
@@ -119,83 +169,59 @@ class TestVolumeLoader(unittest.TestCase):
             self.assertEqual(i + 1, total)
 
             volume3d = volume_loader.get()
-            self.assertEqual(
-                volume3d.mm_resolution,
-                self.test_volume3d_instance.mm_resolution,
-            )
             self.assertTrue(
-                (
-                    self.test_volume3d_instance.np_volume == volume3d.np_volume
-                ).all()
+                volume3d == self.test_volume3d_instance,
             )
 
 
 class TestVolumeSaver(unittest.TestCase):
-    def setUp(self):
-        # // making test volume
-        self.test_volume3d_instance = Volume3D(
-            np_volume=np.random.randint(
-                0, 255, size=(128, 64, 32), dtype=np.uint8
-            ),
-            mm_resolution=0.3,
-        )
-
-        # // making temporary directory
-        self.temporary_directory_p = TemporaryDirectory()
-        self.temporary_directory_path = self.temporary_directory_p.name
-
-    def tearDown(self) -> None:
-        self.temporary_directory_p.cleanup()
-
     def test_volume_save_dtype(self):
-        self.assertTrue(
-            VolumeSaver(self.test_volume3d_instance).is_valid_volume_dtype()
-        )
+        volume3d = get_Volume3D_test_data()
 
-        self.test_volume3d_instance = self.test_volume3d_instance.astype(
-            np.float64
-        )
+        volume3d = volume3d.astype(np.float64)
         with self.assertRaises(AssertionError):
-            VolumeSaver(self.test_volume3d_instance)
+            VolumeSaver(volume3d=volume3d)
 
     def test_volume_slice_generator(self):
-        slice_images = list(
-            VolumeSaver(self.test_volume3d_instance).slice_generator
-        )
+        volume3d = get_Volume3D_test_data()
 
-        self.assertEqual(
-            self.test_volume3d_instance.shape[0], len(slice_images)
-        )
-        self.assertTrue(
-            (
-                self.test_volume3d_instance.np_volume == np.array(slice_images)
-            ).all()
-        )
+        slice_images = list(VolumeSaver(volume3d).slice_generator)
+        self.assertEqual(volume3d.shape[0], len(slice_images))
+        self.assertTrue((volume3d.np_volume == np.array(slice_images)).all())
 
     def test_volume_save_files_iterably(self):
-        volume_saver = VolumeSaver(self.test_volume3d_instance)
+        volume3d = get_Volume3D_test_data()
+        volume_saver = VolumeSaver(volume3d)
 
         with TemporaryDirectory() as temporary_directory:
             for i, total in volume_saver.save_files_iterably(
                 destination_directory=temporary_directory
             ):
                 pass
+            self.assertEqual(i + 1, total)
+
+            volume_loader = VolumeLoader(volume_path=temporary_directory)
 
             self.assertEqual(
-                len(os.listdir(temporary_directory)),
-                self.test_volume3d_instance.shape[0] + 1,
+                volume_loader.image_file_number,
+                volume3d.shape[0],
             )
 
             self.assertTrue(
-                os.path.isfile(
-                    Path(
-                        temporary_directory, volume_saver.volume_info_file_name
-                    )
-                )
+                Path(
+                    temporary_directory, volume_saver.volume_info_file_name
+                ).is_file()
+            )
+
+            self.assertTrue(
+                Path(
+                    temporary_directory, volume_saver.point_cloud_file_name
+                ).is_file()
             )
 
     def test_save_volume_as_archive_iterably(self):
-        volume_saver = VolumeSaver(self.test_volume3d_instance)
+        volume3d = get_Volume3D_test_data()
+        volume_saver = VolumeSaver(volume3d)
 
         with NamedTemporaryFile(suffix=".tar.gz") as temporary_file:
             for i, total in volume_saver.save_volume_as_archive_iterably(
@@ -203,8 +229,7 @@ class TestVolumeSaver(unittest.TestCase):
             ):
                 pass
             self.assertEqual(i + 1, total)
-
-            self.assertTrue(os.path.isfile(temporary_file.name))
+            self.assertTrue(Path(temporary_file.name).is_file())
 
 
 class TestVolumeSeparator(unittest.TestCase):

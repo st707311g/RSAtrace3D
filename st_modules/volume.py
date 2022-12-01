@@ -17,12 +17,14 @@ from dataclasses import dataclass, field
 from operator import attrgetter
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Final, Generator, List, Tuple
+from typing import Any, Final, Generator, List, Tuple
 
 import numpy as np
+import open3d as o3d
 from skimage import io
 
 VOLUME_INFO_FILE_NAME: Final[str] = ".volume_info.json"
+POINT_CLOUD_FILE_NAME: Final[str] = ".sbi_info.pcd"
 
 
 class Volume3D(object):
@@ -35,10 +37,14 @@ class Volume3D(object):
     """
 
     def __init__(
-        self, np_volume: np.ndarray, mm_resolution: float = 0
+        self,
+        np_volume: np.ndarray,
+        mm_resolution: float = 0,
+        point_cloud: Any = None,
     ) -> None:
         self.np_volume = np_volume
         self.mm_resolution = mm_resolution
+        self.point_cloud = point_cloud
 
         assert self.is_valid_volume_shape()
 
@@ -68,6 +74,7 @@ class Volume3D(object):
         return Volume3D(
             np_volume=self.np_volume.astype(dtype),
             mm_resolution=self.mm_resolution,
+            point_cloud=self.point_cloud,
         )
 
     @property
@@ -79,12 +86,40 @@ class Volume3D(object):
         assert value >= 0
         self.__mm_resolution = value
 
+    @property
+    def point_cloud(self):
+        return self.__point_cloud
+
+    @point_cloud.setter
+    def point_cloud(self, item):
+        assert item is None or isinstance(item, o3d.geometry.PointCloud)
+        self.__point_cloud = item
+
     def __repr__(self) -> str:
+        if self.point_cloud is None:
+            point_cloud_str = "None"
+        else:
+            point_cloud_str = f"{len(self.point_cloud.points)} points"
         return {
             "shape": self.shape,
             "dtype": self.dtype,
             "mm_resolution": self.mm_resolution,
+            "sbi_point_cloud": point_cloud_str,
         }.__str__()
+
+    def __eq__(self, __o: object) -> bool:
+        assert isinstance(__o, Volume3D)
+        is_equal_resolution = self.mm_resolution == __o.mm_resolution
+        is_equal_volume = (self.np_volume == __o.np_volume).all()
+        is_equal_point_cloud = (
+            self.point_cloud is None and __o.point_cloud is None
+        ) or (
+            np.asarray(self.point_cloud.points)
+            == np.asarray(__o.point_cloud.points)
+        ).all()
+        return all(
+            [is_equal_resolution, is_equal_volume, is_equal_point_cloud]
+        )
 
 
 @dataclass
@@ -104,6 +139,7 @@ class VolumeLoader(object):
         ".jpeg",
     )
     volume_info_file_name: Final[str] = VOLUME_INFO_FILE_NAME
+    point_cloud_file_name: Final[str] = POINT_CLOUD_FILE_NAME
 
     @property
     def DEFAULT_VOLUME_INFORMATION(self):
@@ -153,8 +189,10 @@ class VolumeLoader(object):
 
     def load_files_iterably(self):
         volume_information = self.DEFAULT_VOLUME_INFORMATION
+        point_cloud = None
         image_list = []
         image_file_number = self.image_file_number
+
         if os.path.isdir(self.volume_path):
             for i, image_file_path in enumerate(self.image_file_list):
                 image_list.append(io.imread(image_file_path))
@@ -167,6 +205,12 @@ class VolumeLoader(object):
                 with open(volume_info_path) as f:
                     volume_information.update(json.load(f))
 
+            point_cloud_path = Path(
+                self.volume_path, self.point_cloud_file_name
+            )
+            if os.path.isfile(point_cloud_path):
+                point_cloud = o3d.io.read_point_cloud(str(point_cloud_path))
+
         elif os.path.isfile(self.volume_path):
             image_file_list = set(self.image_file_list)
             with tarfile.open(name=self.volume_path, mode="r") as tar:
@@ -174,10 +218,16 @@ class VolumeLoader(object):
                 for info in tar.getmembers():
                     if info.name in image_file_list:
                         info_list.append(info)
-                    else:
+                    elif info.name == self.volume_info_file_name:
                         volume_information.update(
                             json.load(tar.extractfile(info))
                         )
+                    elif info.name == self.point_cloud_file_name:
+                        with TemporaryDirectory() as temporary_directory:
+                            tar.extract(info, temporary_directory)
+                            point_cloud = o3d.io.read_point_cloud(
+                                os.path.join(temporary_directory, info.name)
+                            )
 
                 info_list.sort(key=attrgetter("name"))
                 for i, info in enumerate(info_list):
@@ -190,6 +240,7 @@ class VolumeLoader(object):
         self.__volume3d = Volume3D(
             np_volume=np.array(image_list),
             **volume_information,
+            point_cloud=point_cloud,
         )
 
     def get(self):
@@ -205,6 +256,7 @@ class VolumeSaver(object):
     volume3d: Final[Volume3D]
     digits: Final[int] = 4
     volume_info_file_name: Final[str] = VOLUME_INFO_FILE_NAME
+    point_cloud_file_name: Final[str] = POINT_CLOUD_FILE_NAME
 
     def __post_init__(self):
         assert self.is_valid_volume_dtype()
@@ -238,10 +290,28 @@ class VolumeSaver(object):
             io.imsave(image_file_path, img)
             yield i, len(self.np_volume)
 
-        with open(
-            Path(destination_directory_path, self.volume_info_file_name), "w"
-        ) as f:
-            json.dump(self.volume3d.information_dict, f)
+        # // saving volume infomartion data
+        try:
+            with open(
+                Path(destination_directory_path, self.volume_info_file_name),
+                "w",
+            ) as f:
+                json.dump(self.volume3d.information_dict, f)
+        except:
+            pass
+
+        # // saving point cloud data
+        try:
+            o3d.io.write_point_cloud(
+                str(
+                    Path(
+                        destination_directory_path, self.point_cloud_file_name
+                    )
+                ),
+                self.volume3d.point_cloud,
+            )
+        except:
+            pass
 
     def save_volume_as_archive_iterably(
         self, archive_path: str, extension="jpg"
