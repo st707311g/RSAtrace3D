@@ -2,8 +2,8 @@
 
 ![python](https://img.shields.io/badge/Python->3.8-lightgreen)
 ![developed_by](https://img.shields.io/badge/developed%20by-Shota_Teramoto-lightgreen)
-![version](https://img.shields.io/badge/version-1.5-lightgreen)
-![last_updated](https://img.shields.io/badge/last_update-December_1,_2022-lightgreen)
+![version](https://img.shields.io/badge/version-1.6-lightgreen)
+![last_updated](https://img.shields.io/badge/last_update-December_12,_2022-lightgreen)
 
 ![GUI](./figures/RSAtrace3D.jpg)
 
@@ -34,33 +34,18 @@ pip install -r requirements.txt
 
 The confirmed operating environments are shown below:
 
-Environment 1:
-
 - CPU: Intel<sup>(R)</sup> Core<sup>(TM)</sup> i7-8700 CPU @ 3.20 GHz
 - Memory: 32 GB
 - Ubuntu (18.04.4 LTS)
-- Python (3.6.9)
-    - numpy (1.18.4)
-    - scipy (1.4.1)
-    - scikit-image (0.17.1)
-    - pandas (1.1.0)
-    - PyQt5 (5.14.2)
-    - pyqtgraph (0.10.0)
-    - psutil (5.7.0)
-
-Environment 2:
-
-- CPU: Intel<sup>(R)</sup> Core<sup>(TM)</sup> i7-8700 CPU @ 3.20 GHz
-- Memory: 32 GB
-- Ubuntu (18.04.4 LTS)
-- Python (3.8.2)
-    - numpy (1.20.3)
-    - scipy (1.6.3)
-    - scikit-image (0.18.1)
-    - pandas (1.2.4)
-    - PyQt5 (5.14.2)
-    - pyqtgraph (0.12.1)
-    - psutil (5.8.0)
+- Python (3.8.12)
+    - numpy (1.22.4)
+    - scipy (1.8.1)
+    - scikit-image (0.19.2)
+    - pandas (1.4.2)
+    - polars (0.15.2)
+    - PyQt5 (5.15.2)
+    - pyqtgraph (0.13.1)
+    - psutil (5.9.1)
 
 ## installation
 
@@ -129,5 +114,7 @@ https://rootomics.dna.affrc.go.jp/en/
   * fix: types of string (November 29, 2022)
 * version 1.5 (December 1, 2022)
   * update: `st_modules`
-  * support: pyqgraph latest version (0.13.1)
-  * support: pyqgraph latest version (5.15.7)
+  * support: pyqtgraph latest version (0.13.1)
+  * support: pyqt5 latest version (5.15.7)
+* version 1.6 (December 12, 2022)
+  * change: drawing algorithm for faster drawing

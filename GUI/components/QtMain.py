@@ -2,13 +2,18 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any
+from typing import Dict
 
 import config
-from DATA import File, RSA_Components
+import numpy as np
+import polars as pl
+from DATA.RSA import RSA_Components
+from DATA.RSA.components.file import File
+from DATA.RSA.components.rinfo import ID_Object, RootNode
+from data_modules.df_for_drawing import get_dilate_df
 from mod import Extensions, Interpolation, RootTraits, RSATraits
 from PyQt5.QtCore import QEvent, Qt, QThread
+from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QSplitter
 from st_modules.volume import VolumeLoader
 
@@ -43,6 +48,7 @@ class QtMain(QMainWindow):
         self.root_traits = RootTraits()
         self.RSA_traits = RSATraits()
         self.extensions = Extensions(parent=self)
+        self.df_dict_for_drawing: Dict[str, pl.DataFrame] = {}
         self.__RSA_components = RSA_Components(parent=self)
         self.__GUI_components = GUI_Components(parent=self)
         self.setStatusBar(self.GUI_components().statusbar.widget)
@@ -151,9 +157,10 @@ class QtMain(QMainWindow):
 
     def load_from(self, volume_path: str, rinfo_dict: dict = {}):
         self.set_control(locked=True)
+        statusbar = self.GUI_components().statusbar
         self.volume_loader = QtVolumeLoader(
             volume_path=volume_path,
-            progressbar_signal=self.GUI_components().statusbar.pyqtSignal_update_progressbar,
+            progressbar_signal=statusbar.pyqtSignal_update_progressbar,
         )
 
         if not self.volume_loader.is_valid_volume():
@@ -186,13 +193,8 @@ class QtMain(QMainWindow):
         )
 
         self.RSA_components().volume.init_from_volume(volume=volume)
-        self.RSA_components().trace.init_from_volume(volume=volume)
         self.GUI_components().sliceview.update_volume(volume=volume)
         self.GUI_components().projectionview.set_volume(volume=volume)
-
-        trace3D = self.RSA_components().trace.trace3D
-        if trace3D is not None:
-            self.GUI_components().sliceview.update_trace3D(trace3D)
 
         loaded = False
         if self.rinfo_dict:
@@ -216,7 +218,7 @@ class QtMain(QMainWindow):
                     resolution=self.RSA_components().vector.annotations.resolution()
                 )
 
-        if loaded == False:
+        if loaded is False:
             self.set_volume_name(
                 volume_name=self.RSA_components().file.volume_name
             )
@@ -230,13 +232,14 @@ class QtMain(QMainWindow):
             )
 
         self.set_control(locked=False)
-        selected_ID_string = (
-            self.GUI_components().treeview.get_selected_ID_string()
-        )
-        if selected_ID_string is not None:
-            self.GUI_components().projectionview.on_selected_item_changed(
-                ID_string=selected_ID_string
-            )
+        # selected_ID_string = (
+        #    self.GUI_components().treeview.get_selected_ID_string()
+        # )
+        # if selected_ID_string is not None:
+        # self.on_selected_item_changed(
+        #    selected_ID_string=selected_ID_string
+        # )
+        #    pass
 
         self.show_default_msg_in_statusbar()
         self.setWindowTitle()
@@ -246,7 +249,7 @@ class QtMain(QMainWindow):
         RSA_vector = self.RSA_components().vector
         treeview = self.GUI_components().treeview
         ret = RSA_vector.load_from_dict(rinfo_dict, file=file)
-        if ret == False:
+        if ret is False:
             return False
 
         for ID_string in RSA_vector.iter_all():
@@ -260,7 +263,10 @@ class QtMain(QMainWindow):
         self.set_volume_name(volume_name=RSA_vector.annotations.volume_name())
         self.set_resolution(resolution=RSA_vector.annotations.resolution())
 
-        self.GUI_components().sliceview.update_trace_graphics()
+        self.update_df_dict_for_drawing_all()
+        self.on_selected_item_changed(
+            selected_ID_string=self.GUI_components().treeview.get_selected_ID_string()
+        )
 
         return True
 
@@ -276,13 +282,13 @@ class QtMain(QMainWindow):
         if self.is_control_locked():
             return
 
+        treeview = self.GUI_components().treeview
+
         if ev.key() == Qt.Key_Space and not ev.isAutoRepeat():
             self.set_spacekey(pressed=True)
 
         if ev.key() == Qt.Key_Delete and not ev.isAutoRepeat():
-            selected_ID_string = (
-                self.GUI_components().treeview.get_selected_ID_string()
-            )
+            selected_ID_string = treeview.get_selected_ID_string()
             if selected_ID_string is None:
                 return
 
@@ -312,10 +318,21 @@ class QtMain(QMainWindow):
 
             if target_node is not None:
                 ID_string = target_node.ID_string()
-                self.GUI_components().treeview.select(ID_string=ID_string)
+                treeview.select(ID_string=ID_string)
                 target_node.delete()
-                self.GUI_components().treeview.delete(ID_string=ID_string)
-                self.GUI_components().sliceview.update_trace_graphics()
+                treeview.delete(ID_string=ID_string)
+                if ID_string.is_base():
+                    self.update_df_dict_for_drawing_all()
+                elif ID_string.is_root():
+                    del self.df_dict_for_drawing[ID_string]
+                else:
+                    self.update_df_dict_for_drawing(
+                        target_ID_string=ID_string.to_root()
+                    )
+
+                self.on_selected_item_changed(
+                    selected_ID_string=treeview.get_selected_ID_string()
+                )
 
         return
 
@@ -386,6 +403,93 @@ class QtMain(QMainWindow):
             volume_path = self.RSA_components().file.volume_path
             text = f"{text} - {volume_path}"
         super().setWindowTitle(text)
+
+    def update_df_dict_for_drawing_all(self):
+        self.df_dict_for_drawing.clear()
+        rsa_vector = self.RSA_components().vector
+        for base_node in rsa_vector:
+            for root_node in base_node:
+                self.update_df_dict_for_drawing(
+                    target_ID_string=root_node.ID_string()
+                )
+
+    def update_df_dict_for_drawing(self, target_ID_string: ID_Object):
+        rsa_vector = self.RSA_components().vector
+        target_node = rsa_vector[target_ID_string]
+
+        if isinstance(target_node, RootNode):
+            polyline = np.array(target_node.completed_polyline())
+
+            z_array = polyline[:, 0]
+            y_array = polyline[:, 1]
+            x_array = polyline[:, 2]
+            size = 3
+            color = QColor("#8800ff00").getRgb()
+            df = pl.DataFrame(
+                {
+                    "z": z_array,
+                    "y": y_array,
+                    "x": x_array,
+                    "size": [size] * len(x_array),
+                    "color": [color] * len(x_array),
+                }
+            )
+            df = get_dilate_df(df, self.RSA_components().volume.data)
+            self.df_dict_for_drawing.update({target_ID_string: df})
+            self.logger.debug(
+                f"df_dict_for_drawing was updated: {target_ID_string}"
+            )
+
+    def on_selected_item_changed(self, selected_ID_string: ID_Object):
+        self.logger.debug(f"selected item changed: {selected_ID_string}")
+
+        modified_df_dict = {}
+        for ID_string, df in self.df_dict_for_drawing.items():
+
+            if (
+                not selected_ID_string.is_base()
+                and ID_string == selected_ID_string.to_root()
+            ):
+                color = QColor("#ffffff00").getRgb()
+            else:
+                color = QColor("#8800ff00").getRgb()
+
+            df = df.with_column(pl.Series("color", [color] * len(df)))
+            modified_df_dict.update({ID_string: df})
+
+        self.df_dict_for_drawing.clear()
+        self.df_dict_for_drawing.update(modified_df_dict)
+
+        self.GUI_components().sliceview.update_slice_layer()
+
+        self.GUI_components().projectionview.set_view_layer(
+            self.df_dict_for_drawing
+        )
+        self.GUI_components().sliceview.pos_marks.draw(
+            ID_string=selected_ID_string
+        )
+
+        if selected_ID_string is not None:
+            if selected_ID_string.is_base():
+                projection_image = None
+            else:
+                selected_ID_string = selected_ID_string.to_root()
+                np_volume = self.RSA_components().volume.data
+                projection_image = np.zeros(
+                    shape=(np_volume.shape[1], np_volume.shape[2]),
+                    dtype=np.uint8,
+                )
+                df_for_drawing = self.df_dict_for_drawing[selected_ID_string]
+                y_array = df_for_drawing["y"].to_numpy()
+                x_array = df_for_drawing["x"].to_numpy()
+
+                if len(y_array) != 0:
+                    projection_image[y_array, x_array] = 255
+
+            # if selected_ID_string is not None:
+            self.GUI_components().sliceview.isocurve.draw(
+                projection_image=projection_image
+            )
 
 
 @dataclass

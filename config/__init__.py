@@ -1,11 +1,9 @@
 import json
 import os
 
-from .history import History
-
 application_name = "RSAtrace3D"
 version = 1
-revision = 5
+revision = 6
 
 
 def version_string():

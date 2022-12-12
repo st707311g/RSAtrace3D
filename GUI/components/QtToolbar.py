@@ -1,4 +1,4 @@
-from DATA import RSA_Components
+from DATA.RSA import RSA_Components
 from PyQt5.QtGui import QDoubleValidator
 from PyQt5.QtWidgets import QLabel, QLineEdit, QSizePolicy, QToolBar
 

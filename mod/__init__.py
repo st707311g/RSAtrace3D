@@ -64,7 +64,6 @@ class _ClassLoader(object):
                 m_path, _ = os.path.splitext(f)
                 m_path = m_path.replace("/", ".").replace("\\", ".")
                 module = import_module(m_path, self.__module__)
-
                 class_list = list(
                     getmembers(
                         module,

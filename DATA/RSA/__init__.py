@@ -1,12 +1,6 @@
-from .components import (
-    File,
-    ID_Object,
-    RinfoFiles,
-    RSA_Vector,
-    Trace,
-    TraceObject,
-    Volume,
-)
+from .components.file import File
+from .components.rinfo import RSA_Vector
+from .components.volume import Volume
 
 
 class RSA_Components(object):
@@ -16,13 +10,11 @@ class RSA_Components(object):
         self.volume = Volume(parent=self)
         self.file = File()
         self.vector = RSA_Vector()
-        self.trace = Trace()
 
         self.vector.register_RSA_components(RSA_components=self)
         self.vector.register_interpolation(parent.interpolation)
 
     def clear(self):
         self.volume.clear()
-        self.trace.clear()
         self.vector.clear()
         self.file.clear()

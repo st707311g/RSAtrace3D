@@ -4,8 +4,10 @@ import os
 import config
 import imageio.v3 as imageio
 import numpy as np
+import polars as pl
 from config import History
-from DATA import RSA_Components
+from DATA.RSA import RSA_Components
+from GUI.components import QtMain
 from PyQt5.QtCore import QObject
 from PyQt5.QtWidgets import QAction, QFileDialog, QMenu, QMenuBar, QMessageBox
 from st_modules.volume import Volume3D, VolumeSaver
@@ -18,9 +20,10 @@ class QtAction(QAction):
 
 
 class QtMenubar(QMenuBar):
-    def __init__(self, parent):
+    def __init__(self, parent: QtMain):
         super().__init__(**{"parent": parent})
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.__parent = parent
         self.history = History(max_count=10, menu_label="Recent")
         self.history.load(file_name="recent.json")
 
@@ -140,7 +143,7 @@ class QtMenubar(QMenuBar):
     def update(self):
         for m, item in self.__dict__.items():
             if m.lower().startswith(("act_", "menu_")):
-                item.setEnabled(self.parent().is_control_locked() == False)
+                item.setEnabled(self.parent().is_control_locked() is False)
 
         if self.parent().is_control_locked():
             return
@@ -148,9 +151,9 @@ class QtMenubar(QMenuBar):
         for m, item in self.__dict__.items():
             if m.lower().startswith(("act_", "menu_")):
                 if hasattr(item, "auto_enable_volume"):
-                    if item.auto_enable_volume == True:
+                    if item.auto_enable_volume is True:
                         item.setEnabled(
-                            self.RSA_components().volume.is_empty() == False
+                            self.RSA_components().volume.is_empty() is False
                         )
 
         self.menu_history.setEnabled(len(self.menu_history.actions()) != 0)
@@ -180,83 +183,88 @@ class QtMenubar(QMenuBar):
         RSA_vector.save(rinfo_file_name)
 
     def on_act_export_root_csv(self):
-        try:
-            df = self.GUI_components().treeview.to_pandas_df()
-            csv_fname = self.RSA_components().file.root_traits_file
-            volume_name = (
-                self.RSA_components().vector.annotations.volume_name()
+        df = self.GUI_components().treeview.to_pandas_df()
+        csv_fname = self.RSA_components().file.root_traits_file
+        volume_name = self.RSA_components().vector.annotations.volume_name()
+        resolution = self.RSA_components().vector.annotations.resolution()
+        with open(csv_fname, "w", newline="") as f:
+            f.write(
+                "# This file is a summary of root traits measured by RSAtrace3D.\n"
             )
-            resolution = self.RSA_components().vector.annotations.resolution()
-            with open(csv_fname, "w", newline="") as f:
-                f.write(
-                    f"# This file is a summary of root traits measured by RSAtrace3D.\n"
-                )
-                f.write(
-                    f"# Volume name: {volume_name}, Resolution: {resolution}\n"
-                )
-                df.to_csv(f)
-                self.logger.info(f"[Saving succeeded] {csv_fname}")
-        except:
-            self.logger.error(f"[Saving failed]")
+            f.write(
+                f"# Volume name: {volume_name}, Resolution: {resolution}\n"
+            )
+            df.to_csv(f)
+            self.logger.info(f"[Saving succeeded] {csv_fname}")
 
     def on_act_export_projections(self):
-        try:
-            projectionview = self.GUI_components().projectionview
-            for i in range(3):
-                view = projectionview.sub_view_widgets[i].view
-                projection_image = view.projection_image.image
-                trace_image = view.trace_image.image
-                alpha = trace_image[[..., 3]] / 255
-                alpha = np.array(np.stack([alpha, alpha, alpha], axis=2))
-                out_image = np.zeros(projection_image.shape + (3,))
-                out_image = np.stack(
-                    [projection_image, projection_image, projection_image],
-                    axis=2,
-                )
+        projectionview = self.GUI_components().projectionview
+        for i in range(3):
+            view = projectionview.sub_view_widgets[i].view
+            projection_image = view.projection_image.image
+            trace_image = view.trace_image.image
+            alpha = trace_image[[..., 3]] / 255
+            alpha = np.array(np.stack([alpha, alpha, alpha], axis=2))
+            out_image = np.zeros(projection_image.shape + (3,))
+            out_image = np.stack(
+                [projection_image, projection_image, projection_image],
+                axis=2,
+            )
 
-                out_image = np.array(
-                    out_image * (1 - alpha) + trace_image[..., 0:3] * alpha,
-                    dtype=np.uint8,
-                ).transpose(1, 0, 2)
-                out_file = f"{self.RSA_components().file.volume_stem}_projection{i+1}.png"
+            out_image = np.array(
+                out_image * (1 - alpha) + trace_image[..., 0:3] * alpha,
+                dtype=np.uint8,
+            ).transpose(1, 0, 2)
+            volume_stem = self.RSA_components().file.volume_stem
+            out_file = f"{volume_stem}_projection{i+1}.png"
 
-                imageio.imwrite(out_file, out_image)
-                self.logger.info(f"[Saving succeeded] {out_file}")
-        except:
-            self.logger.error(f"[Saving failed]")
+            imageio.imwrite(out_file, out_image)
+            self.logger.info(f"[Saving succeeded] {out_file}")
 
     def on_act_export_trace_images(self):
+        np_volume = self.RSA_components().volume.data
+        df_dict_for_drawing = self.__parent.df_dict_for_drawing
+        trace_object = np.zeros((np_volume.shape[0:3]), dtype=np.uint8)
+
+        df_list_for_drawing = [v for k, v in df_dict_for_drawing.items()]
+        if len(df_list_for_drawing) != 0:
+            df_for_drawing = pl.concat(df_list_for_drawing)
+            z_array = df_for_drawing["z"].to_numpy()
+            y_array = df_for_drawing["y"].to_numpy()
+            x_array = df_for_drawing["x"].to_numpy()
+            color_array = np.array(df_for_drawing["color"].to_list())
+            color_array = color_array[:, 0:3]
+            color_array = (color_array.max(axis=1) != 0) * 255
+
+            if len(z_array) != 0:
+                trace_object[z_array, y_array, x_array] = color_array
+
         self.parent().set_control(locked=True)
         trace_directory = self.RSA_components().file.trace_directory
-        try:
-            trace_3d = self.RSA_components().trace.trace3D
-            if trace_3d is None:
-                return
 
-            if os.path.isdir(trace_directory):
-                self.logger.error(
-                    f"[Saving failed] {trace_directory} already exists."
-                )
-                return
-
-            os.mkdir(trace_directory)
-
-            volume3d = Volume3D(
-                np_volume=trace_3d.volume[..., 1],
-                mm_resolution=self.RSA_components().vector.annotations.resolution(),
+        if trace_directory.is_dir():
+            self.logger.error(
+                f"[Saving failed] {trace_directory} already exists."
             )
-            progressbar_signal = (
-                self.GUI_components().statusbar.pyqtSignal_update_progressbar
-            )
-            volume_saver = VolumeSaver(volume3d=volume3d)
-            for i, total in volume_saver.save_files_iterably(
-                destination_directory=trace_directory, extension="png"
-            ):
-                progressbar_signal.emit(i + 1, total, "File saving")
+            return
 
-            self.logger.info(f"[Saving succeeded] {trace_directory}")
-        except:
-            self.logger.error(f"[Saving failed] {trace_directory}")
+        os.mkdir(trace_directory)
+
+        volume3d = Volume3D(
+            np_volume=trace_object,
+            mm_resolution=self.RSA_components().vector.annotations.resolution(),
+        )
+        progressbar_signal = (
+            self.GUI_components().statusbar.pyqtSignal_update_progressbar
+        )
+        volume_saver = VolumeSaver(volume3d=volume3d)
+        for i, total in volume_saver.save_files_iterably(
+            destination_directory=trace_directory, extension="png"
+        ):
+            progressbar_signal.emit(i + 1, total, "File saving")
+
+        self.logger.info(f"[Saving succeeded] {trace_directory}")
+
         self.parent().set_control(locked=False)
         self.parent().show_default_msg_in_statusbar()
 
@@ -274,7 +282,13 @@ class QtMenubar(QMenuBar):
         self.parent().extensions.activate_window(label=name)
 
     def on_act_about(self):
-        msg = f"{config.application_name} version ({config.version}.{config.revision})\n\n"
-        msg += f"Copyright\u00a9: the National Agriculture and Food Research Organization (2020)\n"
-        msg += f"Author: Shota Teramoto"
+        app_name = config.application_name
+        ver = config.version
+        rev = config.revision
+        msg = f"{app_name} version ({ver}.{rev})\n\n"
+        msg += "Copyright\u00a9: "
+        msg += (
+            "the National Agriculture and Food Research Organization (2020)\n"
+        )
+        msg += "Author: Shota Teramoto"
         QMessageBox.information(None, config.application_name, msg)
