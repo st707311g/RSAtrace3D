@@ -1,5 +1,5 @@
 import psutil
-from DATA import RSA_Components
+from DATA.RSA import RSA_Components
 from PyQt5.QtCore import QObject, QThread, QTimer, pyqtSignal
 from PyQt5.QtWidgets import QLabel, QProgressBar, QSizePolicy, QStatusBar
 

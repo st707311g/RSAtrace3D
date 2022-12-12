@@ -1,5 +1,8 @@
+from typing import Dict, List
+
 import numpy as np
-from DATA import ID_Object, RSA_Components
+import polars as pl
+from DATA.RSA import RSA_Components
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import QGridLayout, QWidget
 from pyqtgraph import ImageItem, InfiniteLine, ViewBox, mkColor
@@ -18,17 +21,14 @@ class CoreViewBox(ViewBox):
 
         self.projection_image = ImageItem()
         self.trace_image = ImageItem()
-        self.selected_trace_image = ImageItem()
         self.addItem(self.projection_image)
         self.addItem(self.trace_image)
-        self.addItem(self.selected_trace_image)
 
         self.setBackgroundColor(mkColor("#000000"))
 
     def clear_all(self):
         self.projection_image.clear()
         self.trace_image.clear()
-        self.selected_trace_image.clear()
 
     def is_empty(self):
         return self.projection_image.image is None
@@ -70,9 +70,6 @@ class CoreViewWidget(GraphicsLayoutWidget):
         self.view.trace_image.setImage(img)
         self.setBackground(self.bg_color)
 
-    def set_selected_trace_image(self, img):
-        self.view.selected_trace_image.setImage(img.transpose(1, 0, 2))
-
     def clear_all(self):
         self.view.clear_all()
 
@@ -112,7 +109,7 @@ class QtProjectionView(QWidget):
         self.main_view_widget = MainViewWidget(identifier=-1, dimension=None)
         self.layout.addWidget(self.main_view_widget, 0, 0, 3, 1)
 
-        self.sub_view_widgets = []
+        self.sub_view_widgets: List[SubViewWidget] = []
         for i, dimension in enumerate([[1, 2], [0, 2], [0, 1]]):
             self.sub_view_widgets.append(
                 SubViewWidget(identifier=i, dimension=dimension)
@@ -171,17 +168,6 @@ class QtProjectionView(QWidget):
         img = view.trace_image.image
         if img is not None:
             self.main_view_widget.set_trace_image(img=img.transpose(1, 0, 2))
-
-        # // update selected_trace
-        img = view.selected_trace_image.image
-        if img is not None:
-            self.main_view_widget.set_selected_trace_image(
-                img=img.transpose(1, 0, 2)
-            )
-        if self.current_view_index != 0:
-            self.main_view_widget.infinite_line.show()
-        else:
-            self.main_view_widget.infinite_line.hide()
 
         self.main_view_widget.view.autoRange()
 
@@ -252,10 +238,50 @@ class QtProjectionView(QWidget):
             (0, self.volume_shape[0])
         )
 
-    def set_trace(self, projections):
-        for i in range(3):
-            img = None if len(projections) != 3 else projections[i].volume
-            self.sub_view_widgets[i].set_trace_image(img=img)
+    def set_view_layer(self, df_dict_for_drawing: Dict[str, pl.DataFrame]):
+        if len(df_dict_for_drawing) == 0:
+            for i, dimension in enumerate([[1, 2], [0, 2], [0, 1]]):
+                sub_view_widget = self.sub_view_widgets[i]
+                projection_image = sub_view_widget.view.projection_image.image
+                if projection_image is None:
+                    continue
+                else:
+                    np_layer = np.zeros(
+                        projection_image.shape + (4,), dtype=np.uint8
+                    )
+                    sub_view_widget.set_trace_image(img=np_layer)
+
+            self.update_main_widget()
+            return
+
+        df_list_for_drawing = [v for k, v in df_dict_for_drawing.items()]
+        df_for_drawing = pl.concat(df_list_for_drawing)
+
+        z_array = df_for_drawing["z"].to_numpy()
+        y_array = df_for_drawing["y"].to_numpy()
+        x_array = df_for_drawing["x"].to_numpy()
+        array_list = [z_array, y_array, x_array]
+        color_array = np.array(df_for_drawing["color"].to_list())
+
+        for i, dimension in enumerate([[1, 2], [0, 2], [0, 1]]):
+            sub_view_widget = self.sub_view_widgets[i]
+            projection_image = sub_view_widget.view.projection_image.image
+            if projection_image is None:
+                continue
+
+            shape = (projection_image.shape[1], projection_image.shape[0], 4)
+
+            np_layer = np.zeros(shape, dtype=np.uint8)
+            if len(df_list_for_drawing) == 0:
+                self.sub_view_widgets[i].set_trace_image(img=np_layer)
+                continue
+
+            if len(z_array) != 0:
+                np_layer[
+                    array_list[dimension[0]], array_list[dimension[1]]
+                ] = color_array
+
+            self.sub_view_widgets[i].set_trace_image(img=np_layer)
 
         self.update_main_widget()
 
@@ -265,35 +291,9 @@ class QtProjectionView(QWidget):
         distance = ((np_polyline.T - ref_coordinate) ** 2).sum(axis=1).min()
         return distance
 
-    def on_selected_item_changed(self, ID_string: ID_Object):
-        if self.current_view_index not in [0, 1, 2] or ID_string is None:
-            return
-
-        if ID_string.is_base():
-            for w in self.all_widgets():
-                w.view.selected_trace_image.hide()
-            return
-
-        for w in self.all_widgets():
-            w.view.selected_trace_image.show()
-
-        for w in self.sub_view_widgets:
-            RSA_vector = self.RSA_components().vector
-            selected_trace = self.RSA_components().trace.create_trace_object(
-                RSA_vector=RSA_vector,
-                ID_string=ID_string,
-                shape=self.volume_shape,
-                dimensions=w.dimension,
-            )
-
-            if selected_trace is not None:
-                w.set_selected_trace_image(img=selected_trace.volume)
-
-        self.update_main_widget()
-
     def on_spacekey_pressed(self, pressed):
         for w in self.all_widgets():
-            if pressed == True:
+            if pressed is True:
                 w.view.trace_image.hide()
             else:
                 w.view.trace_image.show()
@@ -305,4 +305,3 @@ class QtProjectionView(QWidget):
     def on_infinite_line_pos_changed(self, infinite_line: InfiniteLine):
         z_pos = int(infinite_line.pos().y())
         self.GUI_components().sliceview.timeLine.setPos(z_pos)
-        # print(z_pos)
