@@ -3,7 +3,7 @@
 ![python](https://img.shields.io/badge/Python->3.8-lightgreen)
 ![developed_by](https://img.shields.io/badge/developed%20by-Shota_Teramoto-lightgreen)
 ![version](https://img.shields.io/badge/version-1.6-lightgreen)
-![last_updated](https://img.shields.io/badge/last_update-December_12,_2022-lightgreen)
+![last_updated](https://img.shields.io/badge/last_update-December_14,_2022-lightgreen)
 
 ![GUI](./figures/RSAtrace3D.jpg)
 
@@ -118,3 +118,4 @@ https://rootomics.dna.affrc.go.jp/en/
   * support: pyqt5 latest version (5.15.7)
 * version 1.6 (December 12, 2022)
   * change: drawing algorithm for faster drawing
+  * fix: bug (December 14, 2022)

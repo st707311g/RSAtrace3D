@@ -5,7 +5,7 @@ import config
 import imageio.v3 as imageio
 import numpy as np
 import polars as pl
-from config import History
+from config.history import History
 from DATA.RSA import RSA_Components
 from GUI.components import QtMain
 from PyQt5.QtCore import QObject
