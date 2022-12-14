@@ -169,6 +169,11 @@ class QtProjectionView(QWidget):
         if img is not None:
             self.main_view_widget.set_trace_image(img=img.transpose(1, 0, 2))
 
+        if self.current_view_index != 0:
+            self.main_view_widget.infinite_line.show()
+        else:
+            self.main_view_widget.infinite_line.hide()
+
         self.main_view_widget.view.autoRange()
 
     def on_mouse_clicked(self, identifier, coordinate, button, is_valid):
