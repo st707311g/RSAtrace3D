@@ -1,9 +1,18 @@
 import json
 import os
+from typing import Final
 
 application_name = "RSAtrace3D"
 version = 1
-revision = 6
+revision = 7
+
+ALWAYS_YES = False
+COLOR_ROOT_DEFAULT: Final[str] = "#00aa00"
+COLOR_SELECTED_ROOT_DEFAULT: Final[str] = "#ffff00"
+COLOR_ROOT = COLOR_ROOT_DEFAULT
+COLOR_SELECTED_ROOT = COLOR_SELECTED_ROOT_DEFAULT
+
+PROJECTION_INTENSITY = 1.0
 
 
 def version_string():
@@ -21,6 +30,13 @@ params = {}
 
 
 def save(**params):
+    params.update(
+        {
+            "root color": COLOR_ROOT,
+            "selected root color": COLOR_SELECTED_ROOT,
+            "projection intensity": PROJECTION_INTENSITY,
+        }
+    )
     with open(config_file, "w") as f:
         json.dump(params, f, indent=3)
 
@@ -32,4 +48,18 @@ def load():
     with open(config_file, "r") as f:
         config_dict = json.load(f)
 
+    global COLOR_ROOT, COLOR_SELECTED_ROOT, PROJECTION_INTENSITY
+
+    COLOR_ROOT = config_dict.get("root color", COLOR_ROOT_DEFAULT)
+    COLOR_SELECTED_ROOT = config_dict.get(
+        "selected root color", COLOR_SELECTED_ROOT_DEFAULT
+    )
+    PROJECTION_INTENSITY = config_dict.get("projection intensity", 1.0)
+
     return config_dict
+
+
+def reset_root_color():
+    global COLOR_ROOT, COLOR_SELECTED_ROOT
+    COLOR_ROOT = COLOR_ROOT_DEFAULT
+    COLOR_SELECTED_ROOT = COLOR_SELECTED_ROOT_DEFAULT

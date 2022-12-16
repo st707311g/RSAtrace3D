@@ -200,14 +200,18 @@ class QtMain(QMainWindow):
         if self.rinfo_dict:
             loaded = self.load_rinfo_from_dict(self.rinfo_dict)
         elif self.RSA_components().file.is_rinfo_file_available():
-            ret = QMessageBox.information(
-                None,
-                "Information",
-                "The rinfo file is available. Do you want to import this?",
-                QMessageBox.Yes,
-                QMessageBox.No,
-            )
-            if ret == QMessageBox.Yes:
+            if config.ALWAYS_YES:
+                replay = True
+            else:
+                ret = QMessageBox.information(
+                    None,
+                    "Information",
+                    "The rinfo file is available. Do you want to import this?",
+                    QMessageBox.Yes,
+                    QMessageBox.No,
+                )
+                replay = ret == QMessageBox.Yes
+            if replay:
                 loaded = self.load_rinfo(
                     fname=self.RSA_components().file.rinfo_file
                 )
@@ -426,13 +430,15 @@ class QtMain(QMainWindow):
             size = 3
             color = QColor("#8800ff00").getRgb()
             df = pl.DataFrame(
-                {
-                    "z": z_array,
-                    "y": y_array,
-                    "x": x_array,
-                    "size": [size] * len(x_array),
-                    "color": [color] * len(x_array),
-                }
+                (
+                    pl.Series("z", z_array, dtype=pl.Int64),
+                    pl.Series("y", y_array, dtype=pl.Int64),
+                    pl.Series("x", x_array, dtype=pl.Int64),
+                    pl.Series("size", [size] * len(x_array), dtype=pl.Int64),
+                    pl.Series(
+                        "color", [color] * len(x_array), dtype=pl.Object
+                    ),
+                )
             )
             df = get_dilate_df(df, self.RSA_components().volume.data)
             self.df_dict_for_drawing.update({target_ID_string: df})
@@ -450,9 +456,11 @@ class QtMain(QMainWindow):
                 not selected_ID_string.is_base()
                 and ID_string == selected_ID_string.to_root()
             ):
-                color = QColor("#ffffff00").getRgb()
+                color = QColor(config.COLOR_SELECTED_ROOT).getRgb()[0:3] + (
+                    150,
+                )
             else:
-                color = QColor("#8800ff00").getRgb()
+                color = QColor(config.COLOR_ROOT).getRgb()[0:3] + (150,)
 
             df = df.with_column(pl.Series("color", [color] * len(df)))
             modified_df_dict.update({ID_string: df})

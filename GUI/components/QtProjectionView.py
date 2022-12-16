@@ -1,10 +1,13 @@
+from __future__ import annotations
+
 from typing import Dict, List
 
+import config
 import numpy as np
 import polars as pl
 from DATA.RSA import RSA_Components
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QGridLayout, QWidget
+from PyQt5.QtCore import QObject, QPoint, Qt, pyqtSignal
+from PyQt5.QtWidgets import QAction, QActionGroup, QGridLayout, QMenu, QWidget
 from pyqtgraph import ImageItem, InfiniteLine, ViewBox, mkColor
 from pyqtgraph.widgets.GraphicsLayoutWidget import GraphicsLayoutWidget
 
@@ -63,7 +66,13 @@ class CoreViewWidget(GraphicsLayoutWidget):
 
     def set_projection_image(self, img):
         self.view.projection_image.setImage(img.transpose(1, 0))
+        self.on_projection_level_changed()
         self.view.autoRange()
+
+    def on_projection_level_changed(self):
+        self.view.projection_image.setLevels(
+            (0, 255 // config.PROJECTION_INTENSITY)
+        )
 
     def set_trace_image(self, img):
         img = None if img is None else img.transpose(1, 0, 2)
@@ -79,9 +88,42 @@ class CoreViewWidget(GraphicsLayoutWidget):
 
 
 class MainViewWidget(CoreViewWidget):
-    def __init__(self, **kwargs):
+    def __init__(self, parent: QtProjectionView, **kwargs):
         super().__init__(**kwargs)
+        self.__parent = parent
         self.make_viewbox()
+
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.build_context_menu)
+
+    def build_context_menu(self, point: QPoint):
+        if self.__parent.parent().is_control_locked():
+            return
+        menu = QMenu(self)
+
+        act_group = QActionGroup(menu)
+        act_group.setExclusive(True)
+
+        for i in range(1, 6):
+            action = QAction(
+                f"{i/5:.0%}", self, triggered=self.on_act_projection_intensity
+            )
+            action.setData(i / 5)
+            action.setCheckable(True)
+            action.setActionGroup(act_group)
+            action.setChecked(i / 5 == config.PROJECTION_INTENSITY)
+            menu.addAction(action)
+
+        menu.exec_(self.mapToGlobal(point))
+
+    def on_act_projection_intensity(self):
+        obj = QObject.sender(self)
+        projection_intensity = float(obj.data())
+
+        config.PROJECTION_INTENSITY = projection_intensity
+
+        for w in self.__parent.all_widgets():
+            w.on_projection_level_changed()
 
     def make_viewbox(self):
         self.view = MainViewBox(identifier=self.identifier)
@@ -105,8 +147,11 @@ class QtProjectionView(QWidget):
     def __init__(self, parent):
         super().__init__(**{"parent": parent})
         self.__parent = parent
+        print(type(parent))
         self.layout = QGridLayout()
-        self.main_view_widget = MainViewWidget(identifier=-1, dimension=None)
+        self.main_view_widget = MainViewWidget(
+            parent=self, identifier=-1, dimension=None
+        )
         self.layout.addWidget(self.main_view_widget, 0, 0, 3, 1)
 
         self.sub_view_widgets: List[SubViewWidget] = []

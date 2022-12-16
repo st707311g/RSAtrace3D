@@ -5,3 +5,4 @@ scikit-image
 psutil
 pandas
 coloredlogs
+open3d
