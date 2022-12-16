@@ -9,7 +9,15 @@ from config.history import History
 from DATA.RSA import RSA_Components
 from GUI.components import QtMain
 from PyQt5.QtCore import QObject
-from PyQt5.QtWidgets import QAction, QFileDialog, QMenu, QMenuBar, QMessageBox
+from PyQt5.QtGui import QColor
+from PyQt5.QtWidgets import (
+    QAction,
+    QColorDialog,
+    QFileDialog,
+    QMenu,
+    QMenuBar,
+    QMessageBox,
+)
 from st_modules.volume import Volume3D, VolumeSaver
 
 
@@ -127,6 +135,38 @@ class QtMenubar(QMenuBar):
             menu_label="&Extensions", triggered=self.on_menu_extensions
         )
         self.addMenu(self.menu_extensions)
+
+        # // Setting
+        self.menu_setting = QMenu("&Setting")
+        self.addMenu(self.menu_setting)
+
+        self.menu_color = QMenu("&Color")
+        self.menu_setting.addMenu(self.menu_color)
+
+        self.act_change_color_root = QtAction(
+            text="Root",
+            parent=self.parent(),
+            statusTip="change the color for root segments.",
+            triggered=self.on_act_color_root,
+        )
+        self.menu_color.addAction(self.act_change_color_root)
+
+        self.act_change_color_selected_root = QtAction(
+            text="Selected root",
+            parent=self.parent(),
+            statusTip="change the color for selected root segments.",
+            triggered=self.on_act_color_selected_root,
+        )
+        self.menu_color.addAction(self.act_change_color_selected_root)
+
+        self.menu_color.addSeparator()
+        self.act_reset_color = QtAction(
+            text="Reset colors",
+            parent=self.parent(),
+            statusTip="reset color setting.",
+            triggered=self.on_act_reset_colors,
+        )
+        self.menu_color.addAction(self.act_reset_color)
 
         # // Help
         self.menu_help = QMenu("&Help")
@@ -280,6 +320,37 @@ class QtMenubar(QMenuBar):
         name = obj.data()
 
         self.parent().extensions.activate_window(label=name)
+
+    def on_act_color_root(self):
+        color = QColorDialog.getColor(
+            initial=QColor(config.COLOR_ROOT),
+            options=QColorDialog.DontUseNativeDialog,
+        )
+        if color.isValid():
+            config.COLOR_ROOT = color.name()
+            treeview = self.__parent.GUI_components().treeview
+            self.__parent.on_selected_item_changed(
+                selected_ID_string=treeview.get_selected_ID_string()
+            )
+
+    def on_act_color_selected_root(self):
+        color = QColorDialog.getColor(
+            initial=QColor(config.COLOR_SELECTED_ROOT),
+            options=QColorDialog.DontUseNativeDialog,
+        )
+        if color.isValid():
+            config.COLOR_SELECTED_ROOT = color.name()
+            treeview = self.__parent.GUI_components().treeview
+            self.__parent.on_selected_item_changed(
+                selected_ID_string=treeview.get_selected_ID_string()
+            )
+
+    def on_act_reset_colors(self):
+        config.reset_root_color()
+        treeview = self.__parent.GUI_components().treeview
+        self.__parent.on_selected_item_changed(
+            selected_ID_string=treeview.get_selected_ID_string()
+        )
 
     def on_act_about(self):
         app_name = config.application_name

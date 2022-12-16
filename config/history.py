@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+from pathlib import Path
 
 from PyQt5.QtWidgets import QAction, QMenu
 
@@ -38,7 +39,7 @@ class History:
     def get_dict(self):
         dict_ = {}
         for i, item in enumerate(self.iter_forward()):
-            dict_.update({f"{i+1:02}": item})
+            dict_.update({f"{i+1:02}": str(item)})
 
         return dict_
 
@@ -60,17 +61,19 @@ class History:
 
         self.clear()
 
-        try:
-            with open(src, "r") as f:
-                dict_ = json.load(f)
-                for v in dict_.values():
-                    self.add(v)
+        if Path(file_name).is_file():
+            try:
+                with open(src, "r") as f:
+                    dict_ = json.load(f)
+                    for v in dict_.values():
+                        self.add(v)
 
-            return True
-        except:
-            self.logger.error(
-                "[loading failed] History file could not be loaded. The history data has been cleared."
-            )
+                return True
+            except json.decoder.JSONDecodeError:
+                self.logger.error(
+                    "[loading failed] History file could not be loaded. "
+                    "The history data has been cleared."
+                )
             return False
 
     def build_menu(self, parent, triggered):
