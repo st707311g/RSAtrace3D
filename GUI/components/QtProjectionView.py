@@ -147,7 +147,6 @@ class QtProjectionView(QWidget):
     def __init__(self, parent):
         super().__init__(**{"parent": parent})
         self.__parent = parent
-        print(type(parent))
         self.layout = QGridLayout()
         self.main_view_widget = MainViewWidget(
             parent=self, identifier=-1, dimension=None
