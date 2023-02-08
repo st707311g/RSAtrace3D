@@ -1,8 +1,6 @@
 import os
 from pathlib import Path
 
-from st_modules.volume import VolumeLoader
-
 
 class File(object):
     def __init__(self, volume_path: str = ""):
