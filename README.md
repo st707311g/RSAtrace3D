@@ -2,7 +2,7 @@
 
 ![python](https://img.shields.io/badge/Python->3.8-lightgreen)
 ![developed_by](https://img.shields.io/badge/developed%20by-Shota_Teramoto-lightgreen)
-![version](https://img.shields.io/badge/version-1.8-lightgreen)
+![version](https://img.shields.io/badge/version-1.9-lightgreen)
 ![last_updated](https://img.shields.io/badge/last_update-February_8,_2023-lightgreen)
 
 ![GUI](./figures/RSAtrace3D.jpg)
@@ -126,3 +126,5 @@ https://rootomics.dna.affrc.go.jp/en/
 * version 1.8 (February 8, 2023)
   * fix: bug
   * remove: supports tar.gz volume files
+* version 1.9 (February 8, 2023)
+  * update: roots can now be selected on the slice view (shift + double click).

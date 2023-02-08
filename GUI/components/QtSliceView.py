@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import List
 
 import numpy as np
@@ -9,7 +10,7 @@ from DATA.RSA import RSA_Components
 from DATA.RSA.components.rinfo import ID_Object
 from GUI.components import QtMain
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QBrush, QPen
+from PyQt5.QtGui import QBrush, QMouseEvent, QPen
 from PyQt5.QtWidgets import QGraphicsSceneWheelEvent
 from pyqtgraph import (
     GraphItem,
@@ -89,6 +90,7 @@ class QtSliceView(ImageView):
         self.timeLine.sigPositionChanged.connect(self.on_showing_slice_changed)
         self.view.sigRangeChangedManually.connect(self.onRangeChangedManually)
         self.x_range, self.y_range = ([], [])
+        self.prev_click_time = -1
 
     def onRangeChangedManually(self, status):
         self.x_range, self.y_range = self.view.viewRange()
@@ -132,10 +134,10 @@ class QtSliceView(ImageView):
             z=self.currentIndex, y=position.y(), x=position.x()
         )
 
-    def on_mouse_clicked_view(self, ev):
+    def on_mouse_clicked_view(self, ev: QMouseEvent):
         ev.ignore()
 
-    def on_mouse_clicked(self, ev):
+    def on_mouse_clicked(self, ev: QMouseEvent):
         ev.accept()
         if self.RSA_components().volume.is_empty():
             return
@@ -147,22 +149,83 @@ class QtSliceView(ImageView):
         )
 
         if ev.button() == Qt.LeftButton:
-            self.parent().set_control(locked=True)
             annotations = {"coordinate": position}
 
-            if (
-                ev.modifiers() & Qt.ControlModifier
-                and ev.modifiers() & Qt.ShiftModifier
-            ):
-                self.add_base(annotations=annotations)
-            elif ev.modifiers() & Qt.ControlModifier:
-                self.add_relay(annotations=annotations)
+            if ev.modifiers() & Qt.ControlModifier:
+                # // add base node
+                if ev.modifiers() & Qt.ShiftModifier:
+                    self.parent().set_control(locked=True)
+                    self.add_base(annotations=annotations)
+                    self.GUI_components().treeview.update_all_text()
+                    self.parent().set_control(locked=False)
+                    self.parent().show_default_msg_in_statusbar()
+                # // add relay node
+                else:
+                    self.parent().set_control(locked=True)
+                    self.add_relay(annotations=annotations)
+                    self.GUI_components().treeview.update_all_text()
+                    self.parent().set_control(locked=False)
+                    self.parent().show_default_msg_in_statusbar()
             else:
-                self.add_root(annotations=annotations)
+                # // select root
+                if ev.modifiers() & Qt.ShiftModifier:
+                    t1 = self.prev_click_time
+                    t2 = time.time()
+                    if t2 - t1 <= 0.2:
+                        v = self.slice_layer_item.image[
+                            position[2], position[1]
+                        ].max()
+                        if v:
+                            self.select_root_by_clicks(position)
+                    self.prev_click_time = t2
+                    return
+                # // add root node
+                else:
+                    self.parent().set_control(locked=True)
+                    self.add_root(annotations=annotations)
+                    self.GUI_components().treeview.update_all_text()
+                    self.parent().set_control(locked=False)
+                    self.parent().show_default_msg_in_statusbar()
 
-            self.GUI_components().treeview.update_all_text()
-            self.parent().set_control(locked=False)
-            self.parent().show_default_msg_in_statusbar()
+    def __get_closest_distance(self, ref_coordinate, from_polyline):
+        from_polyline = np.array(from_polyline).T
+        np_polyline = np.array(from_polyline)
+        distance = ((np_polyline.T - ref_coordinate) ** 2).sum(axis=1).min()
+        return distance
+
+    def select_root_by_clicks(self, position):
+        ID_string_list = []
+        distance_list = []
+        for ID_string in self.RSA_components().vector.iter_all():
+            if not ID_string.is_root():
+                continue
+            root_node = self.RSA_components().vector.root_node(
+                ID_string=ID_string
+            )
+            if root_node is not None:
+                distance = self.__get_closest_distance(
+                    ref_coordinate=np.array(position),
+                    from_polyline=root_node.completed_polyline(),
+                )
+                ID_string_list.append(ID_string)
+                distance_list.append(distance)
+
+        if len(ID_string_list) == 0:
+            return
+
+        argmin = np.argmin(distance_list)
+        ID_string_min = ID_string_list[argmin]
+        distance_min = distance_list[argmin]
+
+        if distance_min > 20**2:
+            return
+
+        self.parent().set_control(locked=True)
+        self.GUI_components().treeview.select(ID_string=ID_string_min)
+        self.__parent.on_selected_item_changed(
+            selected_ID_string=ID_string_min
+        )
+        self.parent().set_control(locked=False)
 
     def add_base(self, annotations):
         if self.RSA_components().vector.base_node_count() != 0:
