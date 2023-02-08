@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict
 
 import config
@@ -12,10 +12,11 @@ from DATA.RSA.components.file import File
 from DATA.RSA.components.rinfo import ID_Object, RootNode
 from data_modules.df_for_drawing import get_dilate_df
 from mod import Extensions, Interpolation, RootTraits, RSATraits
-from PyQt5.QtCore import QEvent, Qt, QThread
+from modules.volume import VolumeLoader
+from PyQt5.QtCore import QEvent, Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QSplitter
-from st_modules.volume import VolumeLoader
+from skimage import io
 
 from .QtMenubar import QtMenubar
 from .QtProjectionView import QtProjectionView
@@ -142,7 +143,7 @@ class QtMain(QMainWindow):
             self.logger.error("Only 1 volume path at once is acceptable.")
             return
 
-        volume_path: str = flist[0]
+        volume_path = Path(flist[0])
 
         if os.path.isdir(flist[0]):
             self.load_from(volume_path=volume_path)
@@ -155,7 +156,7 @@ class QtMain(QMainWindow):
 
         return
 
-    def load_from(self, volume_path: str, rinfo_dict: dict = {}):
+    def load_from(self, volume_path: Path, rinfo_dict: dict = {}):
         self.set_control(locked=True)
         statusbar = self.GUI_components().statusbar
         self.volume_loader = QtVolumeLoader(
@@ -168,33 +169,31 @@ class QtMain(QMainWindow):
             self.set_control(locked=False)
             return False
 
-        VolumeFile = File(volume_path=volume_path)
+        VolumeFile = File(volume_path=str(volume_path))
         self.rinfo_dict = rinfo_dict
         self.close_volume()
         self.RSA_components().file = VolumeFile
 
         self.volume_loader.finished.connect(self.on_volume_loaded)
         self.volume_loader.start()
-        self.GUI_components().menubar.history.add(volume_path)
+        self.GUI_components().menubar.history.add(str(volume_path))
         self.GUI_components().menubar.history.update_menu()
 
     def on_volume_loaded(self):
         file_instance = self.RSA_components().file
         self.set_volume_name(file_instance.volume_name)
 
-        volume3d = self.volume_loader.data()
-        self.set_resolution(volume3d.mm_resolution)
-
-        volume = volume3d.np_volume
+        np_volume, volume_info = self.volume_loader.data()
+        self.set_resolution(volume_info.get("mm_resolution", 0.3))
         del self.volume_loader
 
         self.logger.info(
             f"[Loading succeeded] {self.RSA_components().file.volume_path}"
         )
 
-        self.RSA_components().volume.init_from_volume(volume=volume)
-        self.GUI_components().sliceview.update_volume(volume=volume)
-        self.GUI_components().projectionview.set_volume(volume=volume)
+        self.RSA_components().volume.init_from_volume(volume=np_volume)
+        self.GUI_components().sliceview.update_volume(volume=np_volume)
+        self.GUI_components().projectionview.set_volume(volume=np_volume)
 
         loaded = False
         if self.rinfo_dict:
@@ -232,18 +231,10 @@ class QtMain(QMainWindow):
                 interpolation.get_selected_label()
             )
             self.RSA_components().vector.annotations.set_volume_shape(
-                volume.shape
+                np_volume.shape
             )
 
         self.set_control(locked=False)
-        # selected_ID_string = (
-        #    self.GUI_components().treeview.get_selected_ID_string()
-        # )
-        # if selected_ID_string is not None:
-        # self.on_selected_item_changed(
-        #    selected_ID_string=selected_ID_string
-        # )
-        #    pass
 
         self.show_default_msg_in_statusbar()
         self.setWindowTitle()
@@ -500,17 +491,28 @@ class QtMain(QMainWindow):
             )
 
 
-@dataclass
-class QtVolumeLoader(QThread, VolumeLoader):
-    def __init__(self, volume_path: str, progressbar_signal):
-        super().__init__(volume_path=volume_path)
+class QtVolumeLoader(QThread):
+    def __init__(self, volume_path: Path, progressbar_signal: pyqtSignal):
+        super().__init__()
+        self.volume_path = volume_path
         self.progressbar_signal = progressbar_signal
 
     def run(self):
-        for i, total in self.load_files_iterably():
-            self.progressbar_signal.emit(i + 1, total, "File loading")
+        vl = VolumeLoader(self.volume_path)
+        img_paths = vl.image_files
 
+        imgs = []
+        for i, p in enumerate(img_paths):
+            imgs.append(io.imread(p))
+            self.progressbar_signal.emit(i + 1, len(img_paths), "File loading")
+
+        self.__np_volume = np.asarray(imgs)
+        self.__volume_info = vl.load_volume_info()
         self.quit()
 
+    def is_valid_volume(self):
+        vl = VolumeLoader(self.volume_path)
+        return vl.is_valid_volume()
+
     def data(self):
-        return self.get()
+        return (self.__np_volume, self.__volume_info)

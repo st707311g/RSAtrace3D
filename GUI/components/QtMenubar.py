@@ -8,6 +8,7 @@ import polars as pl
 from config.history import History
 from DATA.RSA import RSA_Components
 from GUI.components import QtMain
+from modules.volume import VolumeSaver
 from PyQt5.QtCore import QObject
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (
@@ -18,7 +19,6 @@ from PyQt5.QtWidgets import (
     QMenuBar,
     QMessageBox,
 )
-from st_modules.volume import Volume3D, VolumeSaver
 
 
 class QtAction(QAction):
@@ -290,16 +290,12 @@ class QtMenubar(QMenuBar):
 
         os.mkdir(trace_directory)
 
-        volume3d = Volume3D(
-            np_volume=trace_object,
-            mm_resolution=self.RSA_components().vector.annotations.resolution(),
-        )
         progressbar_signal = (
             self.GUI_components().statusbar.pyqtSignal_update_progressbar
         )
-        volume_saver = VolumeSaver(volume3d=volume3d)
-        for i, total in volume_saver.save_files_iterably(
-            destination_directory=trace_directory, extension="png"
+        volume_saver = VolumeSaver(trace_object, {})
+        for i, total in volume_saver.save_iterably(
+            trace_directory, extension="png"
         ):
             progressbar_signal.emit(i + 1, total, "File saving")
 

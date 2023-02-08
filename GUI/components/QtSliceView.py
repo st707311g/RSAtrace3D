@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from typing import List
 
@@ -28,10 +30,16 @@ except ImportError:
 
 
 class _ImageViewBox(ViewBox):
-    def __init__(self):
+    def __init__(self, parent: QtSliceView):
         super().__init__()
+        self.__parent = parent
 
     def wheelEvent(self, ev: QGraphicsSceneWheelEvent, axis=None):
+        if not (ev.modifiers() & Qt.ControlModifier):
+            ev.accept()
+            self.__parent.on_mouse_wheeled(ev)
+            return
+
         if axis in (0, 1):
             mask = [False, False]
             mask[axis] = self.state["mouseEnabled"][axis]
@@ -41,7 +49,6 @@ class _ImageViewBox(ViewBox):
             ev.delta() * self.state["wheelScaleFactor"]
         )  # actual scaling factor
         s = [(None if m is False else s) for m in mask]
-        # center = Point(fn.invertQTransform(self.childGroup.transform()).map(ev.pos()))
         center = Point(
             fn.invertQTransform(self.childGroup.transform()).map(ev.scenePos())
         )
@@ -54,10 +61,11 @@ class _ImageViewBox(ViewBox):
 
 class QtSliceView(ImageView):
     def __init__(self, parent: QtMain):
+        iv = _ImageViewBox(parent=self)
         super().__init__(
             **{
                 "parent": parent,
-                "view": _ImageViewBox(),
+                "view": iv,
             }
         )
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -219,7 +227,7 @@ class QtSliceView(ImageView):
         self.pos_marks.hide()
         self.isocurve.hide()
 
-    def on_mouse_wheeled(self, ev):
+    def on_mouse_wheeled(self, ev: QGraphicsSceneWheelEvent):
         ev.accept()
         if (
             self.parent().is_control_locked()
