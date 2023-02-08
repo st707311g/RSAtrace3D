@@ -309,11 +309,6 @@ class QtTreeView(QTreeView):
             self.__parent.on_selected_item_changed(
                 selected_ID_string=ID_string
             )
-            # self.GUI_components().sliceview.pos_marks.draw(ID_string=ID_string)
-            # self.GUI_components().sliceview.isocurve.draw(ID_string=ID_string)
-            # self.GUI_components().projectionview.on_selected_item_changed(
-            #    ID_string=ID_string
-            # )
             self.GUI_components().sliceview.move_position(ID_string=ID_string)
 
     def to_pandas_df(self):
