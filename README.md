@@ -127,4 +127,4 @@ https://rootomics.dna.affrc.go.jp/en/
   * fix: bug
   * remove: supports tar.gz volume files
 * version 1.9 (February 8, 2023)
-  * update: roots can now be selected on the slice view (shift + double click).
+  * update: roots can be selected on the slice view (shift + double click).
