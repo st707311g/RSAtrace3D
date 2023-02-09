@@ -6,7 +6,6 @@ import imageio.v3 as imageio
 import numpy as np
 import polars as pl
 from config.history import History
-from DATA.RSA import RSA_Components
 from GUI.components import QtMain
 from modules.volume import VolumeSaver
 from PyQt5.QtCore import QObject
@@ -35,11 +34,29 @@ class QtMenubar(QMenuBar):
         self.history = History(max_count=10, menu_label="Recent")
         self.history.load(file_name="recent.json")
 
-    def RSA_components(self) -> RSA_Components:
-        return self.parent().RSA_components()
+    @property
+    def main_window(self) -> QtMain:
+        return self.parent()
 
+    @property
+    def RSA_components(self):
+        return self.main_window.RSA_components()
+
+    @property
+    def RSA_vector(self):
+        return self.RSA_components.vector
+
+    @property
     def GUI_components(self):
-        return self.parent().GUI_components()
+        return self.main_window.GUI_components()
+
+    @property
+    def treeview(self):
+        return self.GUI_components.treeview
+
+    @property
+    def projectionview(self):
+        return self.GUI_components.projectionview
 
     def build(self):
         self.menu_file = QMenu("&File")
@@ -48,7 +65,7 @@ class QtMenubar(QMenuBar):
         # // file menu
         self.act_open_volume = QtAction(
             text="Open volume",
-            parent=self.parent(),
+            parent=self,
             shortcut="Ctrl+O",
             statusTip="Open volume",
             triggered=self.on_act_open_volume,
@@ -113,25 +130,25 @@ class QtMenubar(QMenuBar):
         self.menu_file.addSeparator()
         self.act_exit = QtAction(
             text="Exit",
-            parent=self.parent(),
+            parent=self,
             shortcut="Ctrl+Q",
             statusTip="Exit application",
-            triggered=self.parent().close,
+            triggered=self.main_window.close,
         )
         self.menu_file.addAction(self.act_exit)
 
         # // interpolation menu
-        interpolation = self.RSA_components().vector.interpolation
+        interpolation = self.RSA_vector.interpolation
         self.menu_interpolation = interpolation.build_menu(
             menu_label="&Interpolation", triggered=self.on_menu_interpolation
         )
-        self.RSA_components().vector.annotations.set_interpolation(
+        self.RSA_vector.annotations.set_interpolation(
             interpolation.get_selected_label()
         )
         self.addMenu(self.menu_interpolation)
 
         # // extension menu
-        self.menu_extensions = self.parent().extensions.build_menu(
+        self.menu_extensions = self.main_window.extensions.build_menu(
             menu_label="&Extensions", triggered=self.on_menu_extensions
         )
         self.addMenu(self.menu_extensions)
@@ -145,7 +162,7 @@ class QtMenubar(QMenuBar):
 
         self.act_change_color_root = QtAction(
             text="Root",
-            parent=self.parent(),
+            parent=self,
             statusTip="change the color for root segments.",
             triggered=self.on_act_color_root,
         )
@@ -153,7 +170,7 @@ class QtMenubar(QMenuBar):
 
         self.act_change_color_selected_root = QtAction(
             text="Selected root",
-            parent=self.parent(),
+            parent=self,
             statusTip="change the color for selected root segments.",
             triggered=self.on_act_color_selected_root,
         )
@@ -162,7 +179,7 @@ class QtMenubar(QMenuBar):
         self.menu_color.addSeparator()
         self.act_reset_color = QtAction(
             text="Reset colors",
-            parent=self.parent(),
+            parent=self,
             statusTip="reset color setting.",
             triggered=self.on_act_reset_colors,
         )
@@ -174,7 +191,7 @@ class QtMenubar(QMenuBar):
 
         self.act_about = QtAction(
             text="About",
-            parent=self.parent(),
+            parent=self,
             statusTip="About RSAtrace3D",
             triggered=self.on_act_about,
         )
@@ -183,9 +200,9 @@ class QtMenubar(QMenuBar):
     def update(self):
         for m, item in self.__dict__.items():
             if m.lower().startswith(("act_", "menu_")):
-                item.setEnabled(self.parent().is_control_locked() is False)
+                item.setEnabled(self.main_window.is_control_locked() is False)
 
-        if self.parent().is_control_locked():
+        if self.main_window.is_control_locked():
             return
 
         for m, item in self.__dict__.items():
@@ -193,7 +210,7 @@ class QtMenubar(QMenuBar):
                 if hasattr(item, "auto_enable_volume"):
                     if item.auto_enable_volume is True:
                         item.setEnabled(
-                            self.RSA_components().volume.is_empty() is False
+                            self.RSA_components.volume.is_empty() is False
                         )
 
         self.menu_history.setEnabled(len(self.menu_history.actions()) != 0)
@@ -205,28 +222,26 @@ class QtMenubar(QMenuBar):
         if directory == "":
             return False
 
-        self.parent().load_from(volume_path=directory)
+        self.main_window.load_from(volume_path=directory)
 
     def on_menu_history(self):
         obj = QObject.sender(self)
         name = obj.data()
 
-        self.parent().load_from(volume_path=name)
+        self.main_window.load_from(volume_path=name)
 
     def on_act_close_volume(self):
-        self.parent().close_volume()
+        self.main_window.close_volume()
 
     def on_act_save_rinfo(self):
-        RSA_vector = self.RSA_components().vector
-        rinfo_file_name = self.RSA_components().file.rinfo_file
-
-        RSA_vector.save(rinfo_file_name)
+        rinfo_file_name = self.RSA_components.file.rinfo_file
+        self.RSA_vector.save(rinfo_file_name)
 
     def on_act_export_root_csv(self):
-        df = self.GUI_components().treeview.to_pandas_df()
-        csv_fname = self.RSA_components().file.root_traits_file
-        volume_name = self.RSA_components().vector.annotations.volume_name()
-        resolution = self.RSA_components().vector.annotations.resolution()
+        df = self.treeview.to_pandas_df()
+        csv_fname = self.RSA_components.file.root_traits_file
+        volume_name = self.RSA_vector.annotations.volume_name()
+        resolution = self.RSA_vector.annotations.resolution()
         with open(csv_fname, "w", newline="") as f:
             f.write(
                 "# This file is a summary of root traits measured by RSAtrace3D.\n"
@@ -238,9 +253,8 @@ class QtMenubar(QMenuBar):
             self.logger.info(f"[Saving succeeded] {csv_fname}")
 
     def on_act_export_projections(self):
-        projectionview = self.GUI_components().projectionview
         for i in range(3):
-            view = projectionview.sub_view_widgets[i].view
+            view = self.projectionview.sub_view_widgets[i].view
             projection_image = view.projection_image.image
             trace_image = view.trace_image.image
             alpha = trace_image[[..., 3]] / 255
@@ -255,15 +269,15 @@ class QtMenubar(QMenuBar):
                 out_image * (1 - alpha) + trace_image[..., 0:3] * alpha,
                 dtype=np.uint8,
             ).transpose(1, 0, 2)
-            volume_stem = self.RSA_components().file.volume_stem
+            volume_stem = self.RSA_components.file.volume_stem
             out_file = f"{volume_stem}_projection{i+1}.png"
 
             imageio.imwrite(out_file, out_image)
             self.logger.info(f"[Saving succeeded] {out_file}")
 
     def on_act_export_trace_images(self):
-        np_volume = self.RSA_components().volume.data
-        df_dict_for_drawing = self.__parent.df_dict_for_drawing
+        np_volume = self.RSA_components.volume.data
+        df_dict_for_drawing = self.main_window.df_dict_for_drawing
         trace_object = np.zeros((np_volume.shape[0:3]), dtype=np.uint8)
 
         df_list_for_drawing = [v for k, v in df_dict_for_drawing.items()]
@@ -279,8 +293,8 @@ class QtMenubar(QMenuBar):
             if len(z_array) != 0:
                 trace_object[z_array, y_array, x_array] = color_array
 
-        self.parent().set_control(locked=True)
-        trace_directory = self.RSA_components().file.trace_directory
+        self.main_window.set_control(locked=True)
+        trace_directory = self.RSA_components.file.trace_directory
 
         if trace_directory.is_dir():
             self.logger.error(
@@ -291,7 +305,7 @@ class QtMenubar(QMenuBar):
         os.mkdir(trace_directory)
 
         progressbar_signal = (
-            self.GUI_components().statusbar.pyqtSignal_update_progressbar
+            self.GUI_components.statusbar.pyqtSignal_update_progressbar
         )
         volume_saver = VolumeSaver(trace_object, {})
         for i, total in volume_saver.save_iterably(
@@ -301,21 +315,19 @@ class QtMenubar(QMenuBar):
 
         self.logger.info(f"[Saving succeeded] {trace_directory}")
 
-        self.parent().set_control(locked=False)
-        self.parent().show_default_msg_in_statusbar()
+        self.main_window.set_control(locked=False)
+        self.main_window.show_default_msg_in_statusbar()
 
     def on_menu_interpolation(self):
         obj = QObject.sender(self)
         name = obj.data()
-        self.RSA_components().vector.annotations.set_interpolation(
-            interpolation=name
-        )
+        self.RSA_vector.annotations.set_interpolation(interpolation=name)
 
     def on_menu_extensions(self):
         obj = QObject.sender(self)
         name = obj.data()
 
-        self.parent().extensions.activate_window(label=name)
+        self.main_window.extensions.activate_window(label=name)
 
     def on_act_color_root(self):
         color = QColorDialog.getColor(
@@ -324,9 +336,8 @@ class QtMenubar(QMenuBar):
         )
         if color.isValid():
             config.COLOR_ROOT = color.name()
-            treeview = self.__parent.GUI_components().treeview
-            self.__parent.on_selected_item_changed(
-                selected_ID_string=treeview.get_selected_ID_string()
+            self.main_window.on_selected_item_changed(
+                selected_ID_string=self.treeview.get_selected_ID_string()
             )
 
     def on_act_color_selected_root(self):
@@ -336,16 +347,14 @@ class QtMenubar(QMenuBar):
         )
         if color.isValid():
             config.COLOR_SELECTED_ROOT = color.name()
-            treeview = self.__parent.GUI_components().treeview
-            self.__parent.on_selected_item_changed(
-                selected_ID_string=treeview.get_selected_ID_string()
+            self.main_window.on_selected_item_changed(
+                selected_ID_string=self.treeview.get_selected_ID_string()
             )
 
     def on_act_reset_colors(self):
         config.reset_root_color()
-        treeview = self.__parent.GUI_components().treeview
-        self.__parent.on_selected_item_changed(
-            selected_ID_string=treeview.get_selected_ID_string()
+        self.main_window.on_selected_item_changed(
+            selected_ID_string=self.treeview.get_selected_ID_string()
         )
 
     def on_act_about(self):

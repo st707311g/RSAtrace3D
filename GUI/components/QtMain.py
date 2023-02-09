@@ -364,6 +364,8 @@ class QtMain(QMainWindow):
         if self.RSA_components().volume.is_empty():
             return
 
+        self.df_dict_for_drawing.clear()
+        self.GUI_components().sliceview.update_slice_layer()
         self.RSA_components().clear()
         self.GUI_components().sliceview.clear()
         self.GUI_components().treeview.clear()
@@ -442,7 +444,6 @@ class QtMain(QMainWindow):
 
         modified_df_dict = {}
         for ID_string, df in self.df_dict_for_drawing.items():
-
             if (
                 not selected_ID_string.is_base()
                 and ID_string == selected_ID_string.to_root()
