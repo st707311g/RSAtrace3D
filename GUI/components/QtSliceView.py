@@ -75,6 +75,7 @@ class QtSliceView(ImageView):
         self.ui.roiBtn.hide()
 
         self.slice_layer_item = ImageItem()
+        self.slice_layer_item.setLevels((0, 255))
         self.view.addItem(self.slice_layer_item)
 
         self.isocurve = _IsocurveItem()
@@ -331,7 +332,7 @@ class QtSliceView(ImageView):
             if len(z_array) != 0:
                 slice_layer[x_array, y_array] = color_array
 
-        self.slice_layer_item.setImage(slice_layer)
+        self.slice_layer_item.setImage(slice_layer, autoLevels=False)
 
     def move_position(self, ID_string: ID_Object):
         # // ID_string 分類
