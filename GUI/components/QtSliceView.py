@@ -33,12 +33,12 @@ except ImportError:
 class _ImageViewBox(ViewBox):
     def __init__(self, parent: QtSliceView):
         super().__init__()
-        self.__parent = parent
+        self.sliceview = parent
 
     def wheelEvent(self, ev: QGraphicsSceneWheelEvent, axis=None):
         if not (ev.modifiers() & Qt.ControlModifier):
             ev.accept()
-            self.__parent.on_mouse_wheeled(ev)
+            self.sliceview.on_mouse_wheeled(ev)
             return
 
         if axis in (0, 1):
@@ -96,14 +96,23 @@ class QtSliceView(ImageView):
     def onRangeChangedManually(self, status):
         self.x_range, self.y_range = self.view.viewRange()
 
-    def parent(self):
+    @property
+    def main_window(self):
         return self.__parent
 
-    def RSA_components(self) -> RSA_Components:
-        return self.parent().RSA_components()
+    def RSA_components(self):
+        return self.main_window.RSA_components()
 
     def GUI_components(self):
-        return self.parent().GUI_components()
+        return self.main_window.GUI_components()
+
+    @property
+    def treeview(self):
+        return self.GUI_components().treeview
+
+    @property
+    def projectionview(self):
+        return self.GUI_components().projectionview
 
     def keyPressEvent(self, ev):
         ev.ignore()
@@ -122,9 +131,7 @@ class QtSliceView(ImageView):
     def on_showing_slice_changed(self):
         self.update_slice_layer()
         self.update_statusbar(z=self.currentIndex)
-        self.GUI_components().projectionview.on_showing_slice_changed(
-            index=self.currentIndex
-        )
+        self.projectionview.on_showing_slice_changed(index=self.currentIndex)
 
     def update_statusbar(self, **kwargs):
         self.GUI_components().statusbar.update_mouse_position(**kwargs)
@@ -155,18 +162,18 @@ class QtSliceView(ImageView):
             if ev.modifiers() & Qt.ControlModifier:
                 # // add base node
                 if ev.modifiers() & Qt.ShiftModifier:
-                    self.parent().set_control(locked=True)
+                    self.main_window.set_control(locked=True)
                     self.add_base(annotations=annotations)
-                    self.GUI_components().treeview.update_all_text()
-                    self.parent().set_control(locked=False)
-                    self.parent().show_default_msg_in_statusbar()
+                    self.treeview.update_all_text()
+                    self.main_window.set_control(locked=False)
+                    self.main_window.show_default_msg_in_statusbar()
                 # // add relay node
                 else:
-                    self.parent().set_control(locked=True)
+                    self.main_window.set_control(locked=True)
                     self.add_relay(annotations=annotations)
-                    self.GUI_components().treeview.update_all_text()
-                    self.parent().set_control(locked=False)
-                    self.parent().show_default_msg_in_statusbar()
+                    self.treeview.update_all_text()
+                    self.main_window.set_control(locked=False)
+                    self.main_window.show_default_msg_in_statusbar()
             else:
                 # // select root
                 if ev.modifiers() & Qt.ShiftModifier:
@@ -182,11 +189,11 @@ class QtSliceView(ImageView):
                     return
                 # // add root node
                 else:
-                    self.parent().set_control(locked=True)
+                    self.main_window.set_control(locked=True)
                     self.add_root(annotations=annotations)
-                    self.GUI_components().treeview.update_all_text()
-                    self.parent().set_control(locked=False)
-                    self.parent().show_default_msg_in_statusbar()
+                    self.treeview.update_all_text()
+                    self.main_window.set_control(locked=False)
+                    self.main_window.show_default_msg_in_statusbar()
 
     def __get_closest_distance(self, ref_coordinate, from_polyline):
         from_polyline = np.array(from_polyline).T
@@ -221,27 +228,24 @@ class QtSliceView(ImageView):
         if distance_min > 20**2:
             return
 
-        self.parent().set_control(locked=True)
-        self.GUI_components().treeview.select(ID_string=ID_string_min)
-        self.__parent.on_selected_item_changed(
+        self.main_window.set_control(locked=True)
+        self.treeview.select(ID_string=ID_string_min)
+        self.main_window.on_selected_item_changed(
             selected_ID_string=ID_string_min
         )
-        self.parent().set_control(locked=False)
+        self.main_window.set_control(locked=False)
 
     def add_base(self, annotations):
-        if self.RSA_components().vector.base_node_count() != 0:
-            return
-
         ID_string = self.RSA_components().vector.append_base(
             annotations=annotations
         )
-        self.GUI_components().treeview.add_base(ID_string=ID_string)
+        self.treeview.add_base(ID_string=ID_string)
         self.pos_marks.draw(ID_string=ID_string)
 
+        self.main_window.on_selected_item_changed(selected_ID_string=ID_string)
+
     def add_root(self, annotations):
-        selected_ID_string = (
-            self.GUI_components().treeview.get_selected_ID_string()
-        )
+        selected_ID_string = self.treeview.get_selected_ID_string()
         if selected_ID_string is None:
             return
 
@@ -252,13 +256,12 @@ class QtSliceView(ImageView):
             return
 
         ID_string = base_node.append()
-        self.GUI_components().treeview.add_root(ID_string=ID_string)
+        self.treeview.add_root(ID_string=ID_string)
         self.add_relay(annotations=annotations, root_ID_string=ID_string)
 
     def add_relay(self, annotations: dict, root_ID_string: ID_Object = None):
         selected_ID_string = (
-            root_ID_string
-            or self.GUI_components().treeview.get_selected_ID_string()
+            root_ID_string or self.treeview.get_selected_ID_string()
         )
         if selected_ID_string is None or selected_ID_string.is_base():
             return
@@ -274,12 +277,12 @@ class QtSliceView(ImageView):
             baseID=baseID, rootID=rootID, annotations=annotations
         )
         if ID_string is not None:
-            self.GUI_components().treeview.add_relay(ID_string=ID_string)
+            self.treeview.add_relay(ID_string=ID_string)
 
-        self.parent().update_df_dict_for_drawing(
+        self.main_window.update_df_dict_for_drawing(
             target_ID_string=ID_string.to_root()
         )
-        self.__parent.on_selected_item_changed(
+        self.main_window.on_selected_item_changed(
             selected_ID_string=selected_ID_string
         )
 
@@ -294,7 +297,7 @@ class QtSliceView(ImageView):
     def on_mouse_wheeled(self, ev: QGraphicsSceneWheelEvent):
         ev.accept()
         if (
-            self.parent().is_control_locked()
+            self.main_window.is_control_locked()
             or self.RSA_components().volume.is_empty()
         ):
             return
@@ -372,7 +375,7 @@ class QtSliceView(ImageView):
 
 
 class PosMarks(GraphItem):
-    def __init__(self, imageview):
+    def __init__(self, imageview: QtSliceView):
         self.imageview = imageview
         self.dragPoint = None
         self.dragOffset = None
@@ -380,11 +383,25 @@ class PosMarks(GraphItem):
         super().__init__()
         self.scatter.sigClicked.connect(self.clicked)
 
-    def RSA_components(self) -> RSA_Components:
+    @property
+    def rsa_components(self) -> RSA_Components:
         return self.imageview.RSA_components()
 
-    def GUI_components(self):
+    @property
+    def gui_components(self):
         return self.imageview.GUI_components()
+
+    @property
+    def treeview(self):
+        return self.gui_components.treeview
+
+    @property
+    def ct_volume(self):
+        return self.rsa_components.volume
+
+    @property
+    def rsa_vector(self):
+        return self.rsa_components.vector
 
     def make_draw_parameter_class(self):
         class DrawParameterClass(object):
@@ -426,7 +443,7 @@ class PosMarks(GraphItem):
         return DrawParameterClass()
 
     def draw(self, ID_string: ID_Object = None):
-        if ID_string is None or self.RSA_components().volume.is_empty():
+        if ID_string is None or self.ct_volume.is_empty():
             self.data = {}
             self.setTexts([])
             self.updateGraph()
@@ -435,7 +452,7 @@ class PosMarks(GraphItem):
         draw_parameters = self.make_draw_parameter_class()
 
         def add_marks(ID_string, pen: QPen, brush: QBrush):
-            node = self.RSA_components().vector[ID_string]
+            node = self.rsa_vector[ID_string]
             if node is not None:
                 clicked_coordinate = node["coordinate"]
                 if clicked_coordinate is None:
@@ -456,14 +473,10 @@ class PosMarks(GraphItem):
         )
 
         if not ID_string.is_base():
-            root_node = self.RSA_components().vector.root_node(
-                ID_string=ID_string
-            )
+            root_node = self.rsa_vector.root_node(ID_string=ID_string)
             if root_node is not None:
                 relay_ID_strings = root_node.child_ID_strings()
-                selected_ID_string = (
-                    self.GUI_components().treeview.get_selected_ID_string()
-                )
+                selected_ID_string = self.treeview.get_selected_ID_string()
 
                 for ID_string in relay_ID_strings:
                     if (
@@ -517,11 +530,9 @@ class PosMarks(GraphItem):
         clicked_ID_string = self.ID_strings[spot_items[0].data()[0]]
         if clicked_ID_string.is_base():
             clicked_ID_string = self.ID_strings[-1]
-            self.GUI_components().treeview.select(
-                ID_string=clicked_ID_string.to_root()
-            )
+            self.treeview.select(ID_string=clicked_ID_string.to_root())
         else:
-            self.GUI_components().treeview.select(ID_string=clicked_ID_string)
+            self.treeview.select(ID_string=clicked_ID_string)
 
 
 class _IsocurveItem(IsocurveItem):
