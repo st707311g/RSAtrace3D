@@ -64,18 +64,18 @@ class QtMain(QMainWindow):
         # // splitter setting
         self.main_splitter = QSplitter(Qt.Horizontal)
         self.sub_splitter = QSplitter(Qt.Vertical)
-        self.sub_splitter.addWidget(self.GUI_components().treeview)
-        self.sub_splitter.addWidget(self.GUI_components().projectionview)
-        self.main_splitter.addWidget(self.GUI_components().sliceview)
+        self.sub_splitter.addWidget(self.treeview)
+        self.sub_splitter.addWidget(self.projectionview)
+        self.main_splitter.addWidget(self.sliceview)
         self.main_splitter.addWidget(self.sub_splitter)
         self.main_splitter.setSizes([1024, 1024])
         self.sub_splitter.setSizes([1024, 1024])
         self.setCentralWidget(self.main_splitter)
 
-        self.GUI_components().menubar.build()
-        self.setMenuBar(self.GUI_components().menubar)
+        self.menubar.build()
+        self.setMenuBar(self.menubar)
         self.addToolBar(self.GUI_components().toolbar)
-        self.GUI_components().menubar.update()
+        self.menubar.update()
 
         self.show_default_msg_in_statusbar()
         self.load_config()
@@ -103,6 +103,26 @@ class QtMain(QMainWindow):
     def RSA_components(self):
         return self.__RSA_components
 
+    @property
+    def treeview(self):
+        return self.GUI_components().treeview
+
+    @property
+    def selected_ID_string(self):
+        return self.treeview.get_selected_ID_string()
+
+    @property
+    def projectionview(self):
+        return self.GUI_components().projectionview
+
+    @property
+    def sliceview(self):
+        return self.GUI_components().sliceview
+
+    @property
+    def menubar(self):
+        return self.GUI_components().menubar
+
     def is_control_locked(self):
         return self.__control_locked
 
@@ -112,7 +132,7 @@ class QtMain(QMainWindow):
 
         self.__control_locked = locked
         self.logger.debug(f"Control locked: {self.__control_locked}")
-        self.GUI_components().menubar.update()
+        self.menubar.update()
 
         if locked:
             QApplication.setOverrideCursor(Qt.WaitCursor)
@@ -126,8 +146,8 @@ class QtMain(QMainWindow):
         self.__spacekey_pressed = pressed
         self.logger.debug(f"Space key pressed: {self.__spacekey_pressed}")
         for w in [
-            self.GUI_components().sliceview,
-            self.GUI_components().projectionview,
+            self.sliceview,
+            self.projectionview,
         ]:
             w.on_spacekey_pressed(pressed=self.__spacekey_pressed)
 
@@ -176,8 +196,8 @@ class QtMain(QMainWindow):
 
         self.volume_loader.finished.connect(self.on_volume_loaded)
         self.volume_loader.start()
-        self.GUI_components().menubar.history.add(str(volume_path))
-        self.GUI_components().menubar.history.update_menu()
+        self.menubar.history.add(str(volume_path))
+        self.menubar.history.update_menu()
 
     def on_volume_loaded(self):
         file_instance = self.RSA_components().file
@@ -192,8 +212,8 @@ class QtMain(QMainWindow):
         )
 
         self.RSA_components().volume.init_from_volume(volume=np_volume)
-        self.GUI_components().sliceview.update_volume(volume=np_volume)
-        self.GUI_components().projectionview.set_volume(volume=np_volume)
+        self.sliceview.update_volume(volume=np_volume)
+        self.projectionview.set_volume(volume=np_volume)
 
         loaded = False
         if self.rinfo_dict:
@@ -238,29 +258,28 @@ class QtMain(QMainWindow):
 
         self.show_default_msg_in_statusbar()
         self.setWindowTitle()
-        self.GUI_components().menubar.update()
+        self.menubar.update()
 
     def load_rinfo_from_dict(self, rinfo_dict: dict, file: str = ""):
         RSA_vector = self.RSA_components().vector
-        treeview = self.GUI_components().treeview
         ret = RSA_vector.load_from_dict(rinfo_dict, file=file)
         if ret is False:
             return False
 
         for ID_string in RSA_vector.iter_all():
             if ID_string.is_base():
-                treeview.add_base(ID_string=ID_string)
+                self.treeview.add_base(ID_string=ID_string)
             elif ID_string.is_root():
-                treeview.add_root(ID_string=ID_string)
+                self.treeview.add_root(ID_string=ID_string)
             else:
-                treeview.add_relay(ID_string=ID_string)
+                self.treeview.add_relay(ID_string=ID_string)
 
         self.set_volume_name(volume_name=RSA_vector.annotations.volume_name())
         self.set_resolution(resolution=RSA_vector.annotations.resolution())
 
         self.update_df_dict_for_drawing_all()
         self.on_selected_item_changed(
-            selected_ID_string=self.GUI_components().treeview.get_selected_ID_string()
+            selected_ID_string=self.selected_ID_string
         )
 
         return True
@@ -277,45 +296,42 @@ class QtMain(QMainWindow):
         if self.is_control_locked():
             return
 
-        treeview = self.GUI_components().treeview
-
         if ev.key() == Qt.Key_Space and not ev.isAutoRepeat():
             self.set_spacekey(pressed=True)
 
         if ev.key() == Qt.Key_Delete and not ev.isAutoRepeat():
-            selected_ID_string = treeview.get_selected_ID_string()
-            if selected_ID_string is None:
+            if self.selected_ID_string is None:
                 return
 
             # // choose ID_string that should be deleted
             target_node = None
-            if selected_ID_string.is_base():
+            if self.selected_ID_string.is_base():
                 target_node = self.RSA_components().vector.base_node(
-                    ID_string=selected_ID_string
+                    ID_string=self.selected_ID_string
                 )
-            elif selected_ID_string.is_root():
+            elif self.selected_ID_string.is_root():
                 target_node = self.RSA_components().vector.root_node(
-                    ID_string=selected_ID_string
+                    ID_string=self.selected_ID_string
                 )
             else:
                 root_node = self.RSA_components().vector.root_node(
-                    ID_string=selected_ID_string
+                    ID_string=self.selected_ID_string
                 )
                 if root_node is not None:
                     if root_node.child_count() > 1:
                         target_node = self.RSA_components().vector.relay_node(
-                            ID_string=selected_ID_string
+                            ID_string=self.selected_ID_string
                         )
                     else:
                         target_node = self.RSA_components().vector.root_node(
-                            ID_string=selected_ID_string
+                            ID_string=self.selected_ID_string
                         )
 
             if target_node is not None:
                 ID_string = target_node.ID_string()
-                treeview.select(ID_string=ID_string)
+                self.treeview.select(ID_string=ID_string)
                 target_node.delete()
-                treeview.delete(ID_string=ID_string)
+                self.treeview.delete(ID_string=ID_string)
                 if ID_string.is_base():
                     self.update_df_dict_for_drawing_all()
                 elif ID_string.is_root():
@@ -326,7 +342,7 @@ class QtMain(QMainWindow):
                     )
 
                 self.on_selected_item_changed(
-                    selected_ID_string=treeview.get_selected_ID_string()
+                    selected_ID_string=self.selected_ID_string
                 )
 
         return
@@ -356,7 +372,7 @@ class QtMain(QMainWindow):
             return super().event(ev)
 
     def closeEvent(self, *args, **kwargs):
-        self.GUI_components().menubar.history.save("recent.json")
+        self.menubar.history.save("recent.json")
         self.save_config()
         super().closeEvent(*args, **kwargs)
 
@@ -365,12 +381,12 @@ class QtMain(QMainWindow):
             return
 
         self.df_dict_for_drawing.clear()
-        self.GUI_components().sliceview.update_slice_layer()
+        self.sliceview.update_slice_layer()
         self.RSA_components().clear()
-        self.GUI_components().sliceview.clear()
-        self.GUI_components().treeview.clear()
-        self.GUI_components().menubar.update()
-        self.GUI_components().projectionview.clear()
+        self.sliceview.clear()
+        self.treeview.clear()
+        self.menubar.update()
+        self.projectionview.clear()
 
         self.show_default_msg_in_statusbar()
         self.setWindowTitle()
@@ -444,7 +460,12 @@ class QtMain(QMainWindow):
 
         modified_df_dict = {}
         for ID_string, df in self.df_dict_for_drawing.items():
-            if (
+            ID_string = ID_Object(ID_string)
+            if ID_string.baseID() != selected_ID_string.baseID():
+                color = QColor(config.COLOR_SELECTED_ROOT).getRgb()[0:3] + (
+                    40,
+                )
+            elif (
                 not selected_ID_string.is_base()
                 and ID_string == selected_ID_string.to_root()
             ):
@@ -460,14 +481,10 @@ class QtMain(QMainWindow):
         self.df_dict_for_drawing.clear()
         self.df_dict_for_drawing.update(modified_df_dict)
 
-        self.GUI_components().sliceview.update_slice_layer()
+        self.sliceview.update_slice_layer()
 
-        self.GUI_components().projectionview.set_view_layer(
-            self.df_dict_for_drawing
-        )
-        self.GUI_components().sliceview.pos_marks.draw(
-            ID_string=selected_ID_string
-        )
+        self.projectionview.set_view_layer(self.df_dict_for_drawing)
+        self.sliceview.pos_marks.draw(ID_string=selected_ID_string)
 
         if selected_ID_string is not None:
             if selected_ID_string.is_base():
@@ -487,9 +504,7 @@ class QtMain(QMainWindow):
                     projection_image[y_array, x_array] = 255
 
             # if selected_ID_string is not None:
-            self.GUI_components().sliceview.isocurve.draw(
-                projection_image=projection_image
-            )
+            self.sliceview.isocurve.draw(projection_image=projection_image)
 
 
 class QtVolumeLoader(QThread):
