@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow
+from PySide6.QtWidgets import QMainWindow
 
 from .__backbone__ import ExtensionBackbone
 

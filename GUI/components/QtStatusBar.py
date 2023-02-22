@@ -1,11 +1,11 @@
 import psutil
 from DATA.RSA import RSA_Components
-from PyQt5.QtCore import QObject, QThread, QTimer, pyqtSignal
-from PyQt5.QtWidgets import QLabel, QProgressBar, QSizePolicy, QStatusBar
+from PySide6.QtCore import QObject, QThread, QTimer, Signal
+from PySide6.QtWidgets import QLabel, QProgressBar, QSizePolicy, QStatusBar
 
 
 class QtStatusBarW(QObject):
-    pyqtSignal_update_progressbar = pyqtSignal(int, int, str)
+    pyqtSignal_update_progressbar = Signal(int, int, str)
 
     def __init__(self, parent):
         super().__init__()

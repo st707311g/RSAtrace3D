@@ -1,23 +1,38 @@
-from DATA.RSA import RSA_Components
-from PyQt5.QtGui import QDoubleValidator
-from PyQt5.QtWidgets import QLabel, QLineEdit, QSizePolicy, QToolBar
+from GUI.components import QtMain
+from PySide6.QtGui import QDoubleValidator
+from PySide6.QtWidgets import QLabel, QLineEdit, QSizePolicy, QToolBar
 
 
 class QtToolBar(QToolBar):
-    def __init__(self, parent):
+    def __init__(self, parent: QtMain):
         super().__init__(*("Main",))
         self.__parent = parent
         self.setMovable(False)
         self.init_interface()
 
-    def parent(self):
+    @property
+    def main_window(self):
         return self.__parent
 
-    def RSA_components(self) -> RSA_Components:
-        return self.parent().RSA_components()
+    @property
+    def RSA_components(self):
+        return self.main_window.RSA_components()
 
+    @property
+    def RSA_vector(self):
+        return self.RSA_components.vector
+
+    @property
     def GUI_components(self):
-        return self.parent().GUI_components()
+        return self.main_window.GUI_components()
+
+    @property
+    def treeview(self):
+        return self.GUI_components.treeview
+
+    @property
+    def sliceview(self):
+        return self.GUI_components.sliceview
 
     def init_interface(self):
         self.volumename_edit = VolumeNameEdit("")
@@ -42,21 +57,17 @@ class QtToolBar(QToolBar):
         # // volume name lineedit
         if self.volumename_edit.isModified():
             volume_name = self.volumename_edit.text()
-            self.RSA_components().vector.annotations.set_volume_name(
-                name=volume_name
-            )
+            self.RSA_vector.annotations.set_volume_name(name=volume_name)
             self.volumename_edit.setModified(False)
 
         # // resolution
         if self.voxel_lineedit.isModified():
             resolution = float(self.voxel_lineedit.text())
-            self.RSA_components().vector.annotations.set_resolution(
-                resolution=resolution
-            )
-            self.GUI_components().treeview.update_all_text()
+            self.RSA_vector.annotations.set_resolution(resolution=resolution)
+            self.treeview.update_all_text()
             self.voxel_lineedit.setModified(False)
 
-        self.parent().GUI_components().sliceview.setFocus()
+        self.sliceview.setFocus()
 
 
 class VolumeNameEdit(QLineEdit):

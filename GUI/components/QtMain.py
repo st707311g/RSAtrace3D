@@ -13,9 +13,9 @@ from DATA.RSA.components.rinfo import ID_Object, RootNode
 from data_modules.df_for_drawing import get_dilate_df
 from mod import Extensions, Interpolation, RootTraits, RSATraits
 from modules.volume import VolumeLoader
-from PyQt5.QtCore import QEvent, Qt, QThread, pyqtSignal
-from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QSplitter
+from PySide6.QtCore import QEvent, Qt, QThread, Signal
+from PySide6.QtGui import QColor, QKeyEvent
+from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QSplitter
 from skimage import io
 
 from .QtMenubar import QtMenubar
@@ -102,6 +102,10 @@ class QtMain(QMainWindow):
 
     def RSA_components(self):
         return self.__RSA_components
+
+    @property
+    def RSA_vector(self):
+        return self.RSA_components().vector
 
     @property
     def treeview(self):
@@ -235,10 +239,10 @@ class QtMain(QMainWindow):
                     fname=self.RSA_components().file.rinfo_file
                 )
                 self.set_volume_name(
-                    volume_name=self.RSA_components().vector.annotations.volume_name()
+                    volume_name=self.RSA_vector.annotations.volume_name()
                 )
                 self.set_resolution(
-                    resolution=self.RSA_components().vector.annotations.resolution()
+                    resolution=self.RSA_vector.annotations.resolution()
                 )
 
         if loaded is False:
@@ -246,13 +250,11 @@ class QtMain(QMainWindow):
                 volume_name=self.RSA_components().file.volume_name
             )
 
-            interpolation = self.RSA_components().vector.interpolation
-            self.RSA_components().vector.annotations.set_interpolation(
+            interpolation = self.RSA_vector.interpolation
+            self.RSA_vector.annotations.set_interpolation(
                 interpolation.get_selected_label()
             )
-            self.RSA_components().vector.annotations.set_volume_shape(
-                np_volume.shape
-            )
+            self.RSA_vector.annotations.set_volume_shape(np_volume.shape)
 
         self.set_control(locked=False)
 
@@ -261,12 +263,11 @@ class QtMain(QMainWindow):
         self.menubar.update()
 
     def load_rinfo_from_dict(self, rinfo_dict: dict, file: str = ""):
-        RSA_vector = self.RSA_components().vector
-        ret = RSA_vector.load_from_dict(rinfo_dict, file=file)
+        ret = self.RSA_vector.load_from_dict(rinfo_dict, file=file)
         if ret is False:
             return False
 
-        for ID_string in RSA_vector.iter_all():
+        for ID_string in self.RSA_vector.iter_all():
             if ID_string.is_base():
                 self.treeview.add_base(ID_string=ID_string)
             elif ID_string.is_root():
@@ -274,8 +275,12 @@ class QtMain(QMainWindow):
             else:
                 self.treeview.add_relay(ID_string=ID_string)
 
-        self.set_volume_name(volume_name=RSA_vector.annotations.volume_name())
-        self.set_resolution(resolution=RSA_vector.annotations.resolution())
+        self.set_volume_name(
+            volume_name=self.RSA_vector.annotations.volume_name()
+        )
+        self.set_resolution(
+            resolution=self.RSA_vector.annotations.resolution()
+        )
 
         self.update_df_dict_for_drawing_all()
         self.on_selected_item_changed(
@@ -290,14 +295,14 @@ class QtMain(QMainWindow):
 
         return self.load_rinfo_from_dict(trace_dict, file=fname)
 
-    # // key press event
-    def keyPressEvent(self, ev):
+    def keyPressEvent(self, ev: QKeyEvent):
         ev.accept()
         if self.is_control_locked():
             return
 
         if ev.key() == Qt.Key_Space and not ev.isAutoRepeat():
             self.set_spacekey(pressed=True)
+            return
 
         if ev.key() == Qt.Key_Delete and not ev.isAutoRepeat():
             if self.selected_ID_string is None:
@@ -306,28 +311,25 @@ class QtMain(QMainWindow):
             # // choose ID_string that should be deleted
             target_node = None
             if self.selected_ID_string.is_base():
-                target_node = self.RSA_components().vector.base_node(
+                target_node = self.RSA_vector.base_node(
                     ID_string=self.selected_ID_string
                 )
             elif self.selected_ID_string.is_root():
-                target_node = self.RSA_components().vector.root_node(
+                target_node = self.RSA_vector.root_node(
                     ID_string=self.selected_ID_string
                 )
-            else:
-                root_node = self.RSA_components().vector.root_node(
+            elif self.selected_ID_string.is_relay():
+                target_node = self.RSA_vector.root_node(
                     ID_string=self.selected_ID_string
                 )
-                if root_node is not None:
-                    if root_node.child_count() > 1:
-                        target_node = self.RSA_components().vector.relay_node(
-                            ID_string=self.selected_ID_string
-                        )
-                    else:
-                        target_node = self.RSA_components().vector.root_node(
+                if target_node is not None:
+                    if target_node.child_count() > 1:
+                        target_node = self.RSA_vector.relay_node(
                             ID_string=self.selected_ID_string
                         )
 
             if target_node is not None:
+                self.set_control(True)
                 ID_string = target_node.ID_string()
                 self.treeview.select(ID_string=ID_string)
                 target_node.delete()
@@ -344,10 +346,10 @@ class QtMain(QMainWindow):
                 self.on_selected_item_changed(
                     selected_ID_string=self.selected_ID_string
                 )
+                self.set_control(False)
 
         return
 
-    # // key release event
     def keyReleaseEvent(self, ev):
         ev.accept()
         if self.is_control_locked():
@@ -374,6 +376,12 @@ class QtMain(QMainWindow):
     def closeEvent(self, *args, **kwargs):
         self.menubar.history.save("recent.json")
         self.save_config()
+
+        self.extensions.destroy_instance()
+
+        self.GUI_components().statusbar.thread.quit()
+        self.GUI_components().statusbar.thread.wait()
+
         super().closeEvent(*args, **kwargs)
 
     def close_volume(self):
@@ -400,15 +408,11 @@ class QtMain(QMainWindow):
 
     def set_volume_name(self, volume_name):
         self.GUI_components().toolbar.volumename_edit.setText(str(volume_name))
-        self.RSA_components().vector.annotations.set_volume_name(
-            name=volume_name
-        )
+        self.RSA_vector.annotations.set_volume_name(name=volume_name)
 
     def set_resolution(self, resolution):
         self.GUI_components().toolbar.voxel_lineedit.setText(str(resolution))
-        self.RSA_components().vector.annotations.set_resolution(
-            resolution=resolution
-        )
+        self.RSA_vector.annotations.set_resolution(resolution=resolution)
 
     def setWindowTitle(self):
         text = f"RSAtrace3D (version {config.version_string()})"
@@ -419,16 +423,14 @@ class QtMain(QMainWindow):
 
     def update_df_dict_for_drawing_all(self):
         self.df_dict_for_drawing.clear()
-        rsa_vector = self.RSA_components().vector
-        for base_node in rsa_vector:
+        for base_node in self.RSA_vector:
             for root_node in base_node:
                 self.update_df_dict_for_drawing(
                     target_ID_string=root_node.ID_string()
                 )
 
     def update_df_dict_for_drawing(self, target_ID_string: ID_Object):
-        rsa_vector = self.RSA_components().vector
-        target_node = rsa_vector[target_ID_string]
+        target_node = self.RSA_vector[target_ID_string]
 
         if isinstance(target_node, RootNode):
             polyline = np.array(target_node.completed_polyline())
@@ -508,7 +510,7 @@ class QtMain(QMainWindow):
 
 
 class QtVolumeLoader(QThread):
-    def __init__(self, volume_path: Path, progressbar_signal: pyqtSignal):
+    def __init__(self, volume_path: Path, progressbar_signal: Signal):
         super().__init__()
         self.volume_path = volume_path
         self.progressbar_signal = progressbar_signal

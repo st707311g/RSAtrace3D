@@ -1,8 +1,7 @@
-PyQt5>=5.15, <5.16
+PySide6
 pyqtgraph>=0.13, <0.14
 polars
 scikit-image
 psutil
 pandas
 coloredlogs
-open3d

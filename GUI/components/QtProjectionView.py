@@ -5,17 +5,20 @@ from typing import Dict, List
 import config
 import numpy as np
 import polars as pl
-from DATA.RSA import RSA_Components
-from PyQt5.QtCore import QObject, QPoint, Qt, pyqtSignal
-from PyQt5.QtWidgets import QAction, QActionGroup, QGridLayout, QMenu, QWidget
-from pyqtgraph import ImageItem, InfiniteLine, ViewBox, mkColor
-from pyqtgraph.widgets.GraphicsLayoutWidget import GraphicsLayoutWidget
+from GUI.components import QtMain
+from PySide6.QtCore import QObject, QPoint, QPointF, Qt, Signal
+from PySide6.QtGui import QAction, QActionGroup
+from PySide6.QtWidgets import QGridLayout, QMenu, QWidget
+
+if True:
+    from pyqtgraph import ImageItem, InfiniteLine, ViewBox, mkColor
+    from pyqtgraph.widgets.GraphicsLayoutWidget import GraphicsLayoutWidget
 
 
 class CoreViewBox(ViewBox):
-    pyqtSignal_mouseClickEvent = pyqtSignal(int, object, int, bool)
+    pyqtSignal_mouseClickEvent = Signal(int, object, object, bool)
 
-    def __init__(self, identifier, **kwargs):
+    def __init__(self, identifier: int, **kwargs):
         super().__init__(**kwargs)
         self.identifier = identifier
 
@@ -36,12 +39,12 @@ class CoreViewBox(ViewBox):
     def is_empty(self):
         return self.projection_image.image is None
 
-    def mouseClickEvent(self, ev):
+    def mouseClickEvent(self, ev: mouseClickEvent):
         self.pyqtSignal_mouseClickEvent.emit(
             self.identifier,
             self.mapToView(ev.pos()),
             ev.button(),
-            self.projection_image.image is not None,
+            not self.is_empty(),
         )
 
 
@@ -56,7 +59,7 @@ class SubViewBox(CoreViewBox):
 
 
 class CoreViewWidget(GraphicsLayoutWidget):
-    def __init__(self, identifier, dimension):
+    def __init__(self, identifier: int, dimension: List[int]):
         super().__init__()
         self.identifier = identifier
         self.dimension = dimension
@@ -97,7 +100,7 @@ class MainViewWidget(CoreViewWidget):
         self.customContextMenuRequested.connect(self.build_context_menu)
 
     def build_context_menu(self, point: QPoint):
-        if self.__parent.parent().is_control_locked():
+        if self.__parent.main_window.is_control_locked():
             return
         menu = QMenu(self)
 
@@ -122,7 +125,7 @@ class MainViewWidget(CoreViewWidget):
 
         config.PROJECTION_INTENSITY = projection_intensity
 
-        for w in self.__parent.all_widgets():
+        for w in self.__parent.all_widgets:
             w.on_projection_level_changed()
 
     def make_viewbox(self):
@@ -144,7 +147,7 @@ class SubViewWidget(CoreViewWidget):
 
 
 class QtProjectionView(QWidget):
-    def __init__(self, parent):
+    def __init__(self, parent: QtMain):
         super().__init__(**{"parent": parent})
         self.__parent = parent
         self.layout = QGridLayout()
@@ -169,27 +172,41 @@ class QtProjectionView(QWidget):
         self.setLayout(self.layout)
 
         self.current_view_index = -1
-        self.dimensions = ((1, 2), (0, 2), (0, 1))
-        self.selected_ID_string = None
 
-        for w in self.all_widgets():
+        for w in self.all_widgets:
             w.view.pyqtSignal_mouseClickEvent.connect(self.on_mouse_clicked)
 
         self.main_view_widget.infinite_line.sigDragged.connect(
             self.on_infinite_line_pos_changed
         )
 
-    def all_widgets(self):
-        return [self.main_view_widget] + self.sub_view_widgets
-
-    def parent(self):
+    @property
+    def main_window(self):
         return self.__parent
 
-    def RSA_components(self) -> RSA_Components:
-        return self.parent().RSA_components()
+    @property
+    def RSA_components(self):
+        return self.main_window.RSA_components()
 
+    @property
+    def RSA_vector(self):
+        return self.RSA_components.vector
+
+    @property
     def GUI_components(self):
-        return self.parent().GUI_components()
+        return self.main_window.GUI_components()
+
+    @property
+    def treeview(self):
+        return self.GUI_components.treeview
+
+    @property
+    def sliceview(self):
+        return self.GUI_components.sliceview
+
+    @property
+    def all_widgets(self):
+        return [self.main_view_widget] + self.sub_view_widgets
 
     def update_selected_items(self):
         self.main_view_widget.select_itself(flag=False)
@@ -220,25 +237,31 @@ class QtProjectionView(QWidget):
 
         self.main_view_widget.view.autoRange()
 
-    def on_mouse_clicked(self, identifier, coordinate, button, is_valid):
+    def on_mouse_clicked(
+        self,
+        identifier: int,
+        coordinate: QPointF,
+        button: Qt.MouseButton,
+        is_valid: bool,
+    ):
         if is_valid is False or button != Qt.LeftButton:
             return
 
         if identifier == -1:
             ID_string_list = []
             distance_list = []
-            for ID_string in self.RSA_components().vector.iter_all():
+            for ID_string in self.RSA_vector.iter_all():
                 if not ID_string.is_root():
                     continue
-                root_node = self.RSA_components().vector.root_node(
-                    ID_string=ID_string
-                )
+                root_node = self.RSA_vector.root_node(ID_string=ID_string)
                 if root_node is not None:
                     distance = self.__get_closest_distance(
                         ref_coordinate=np.array(
                             [int(coordinate.y()), int(coordinate.x())]
                         ),
-                        from_polyline=root_node.completed_polyline(),
+                        from_polyline=np.asarray(
+                            root_node.completed_polyline()
+                        ),
                         index=self.current_view_index,
                     )
                     ID_string_list.append(ID_string)
@@ -254,7 +277,7 @@ class QtProjectionView(QWidget):
             if distance_min > 20**2:
                 return
 
-            self.GUI_components().treeview.select(ID_string=ID_string_min)
+            self.treeview.select(ID_string=ID_string_min)
 
         if identifier in [0, 1, 2]:
             self.current_view_index = identifier
@@ -269,7 +292,7 @@ class QtProjectionView(QWidget):
             self.sub_view_widgets[i].clear_all()
         self.main_view_widget.infinite_line.hide()
 
-    def set_volume(self, volume):
+    def set_volume(self, volume: np.ndarray):
         if volume is None:
             return
 
@@ -334,14 +357,16 @@ class QtProjectionView(QWidget):
 
         self.update_main_widget()
 
-    def __get_closest_distance(self, ref_coordinate, from_polyline, index):
+    def __get_closest_distance(
+        self, ref_coordinate: np.ndarray, from_polyline: np.ndarray, index: int
+    ):
         from_polyline = np.array(from_polyline).T
         np_polyline = np.delete(np.array(from_polyline), index, axis=0)
         distance = ((np_polyline.T - ref_coordinate) ** 2).sum(axis=1).min()
         return distance
 
-    def on_spacekey_pressed(self, pressed):
-        for w in self.all_widgets():
+    def on_spacekey_pressed(self, pressed: bool):
+        for w in self.all_widgets:
             if pressed is True:
                 w.view.trace_image.hide()
             else:
@@ -353,4 +378,4 @@ class QtProjectionView(QWidget):
 
     def on_infinite_line_pos_changed(self, infinite_line: InfiniteLine):
         z_pos = int(infinite_line.pos().y())
-        self.GUI_components().sliceview.timeLine.setPos(z_pos)
+        self.sliceview.timeLine.setPos(z_pos)

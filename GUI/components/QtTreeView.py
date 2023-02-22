@@ -4,14 +4,9 @@ import pandas as pd
 from DATA.RSA import RSA_Components
 from DATA.RSA.components.rinfo import ID_Object
 from GUI.components import QtMain
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QStandardItemModel
-from PyQt5.QtWidgets import QHeaderView, QTreeView
-
-try:
-    from PyQt5.QtGui import QAbstractItemView
-except ImportError:
-    from PyQt5.QtWidgets import QAbstractItemView
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QStandardItemModel
+from PySide6.QtWidgets import QAbstractItemView, QHeaderView, QTreeView
 
 
 class TreeViewHeader(QHeaderView):
@@ -92,7 +87,7 @@ class TreeModel(QStandardItemModel):
 
 
 class QtTreeView(QTreeView):
-    pyqtSignal_selected_item_changed = pyqtSignal(object)
+    pyqtSignal_selected_item_changed = Signal(object)
 
     def __init__(self, parent: QtMain):
         super().__init__(**{"parent": parent})
