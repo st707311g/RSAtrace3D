@@ -9,20 +9,22 @@ import polars as pl
 from DATA.RSA import RSA_Components
 from DATA.RSA.components.rinfo import ID_Object
 from GUI.components import QtMain
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QBrush, QMouseEvent, QPen
-from PyQt5.QtWidgets import QGraphicsSceneWheelEvent
-from pyqtgraph import (
-    GraphItem,
-    ImageItem,
-    ImageView,
-    IsocurveItem,
-    Point,
-    TextItem,
-    ViewBox,
-    mkBrush,
-    mkPen,
-)
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QBrush, QMouseEvent, QPen
+from PySide6.QtWidgets import QGraphicsSceneWheelEvent
+
+if True:
+    from pyqtgraph import (
+        GraphItem,
+        ImageItem,
+        ImageView,
+        IsocurveItem,
+        Point,
+        TextItem,
+        ViewBox,
+        mkBrush,
+        mkPen,
+    )
 
 try:
     from pyqtgraph import fn

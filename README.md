@@ -2,8 +2,8 @@
 
 ![python](https://img.shields.io/badge/Python->3.8-lightgreen)
 ![developed_by](https://img.shields.io/badge/developed%20by-Shota_Teramoto-lightgreen)
-![version](https://img.shields.io/badge/version-1.10-lightgreen)
-![last_updated](https://img.shields.io/badge/last_update-February_10,_2023-lightgreen)
+![version](https://img.shields.io/badge/version-1.11-lightgreen)
+![last_updated](https://img.shields.io/badge/last_update-February_22,_2023-lightgreen)
 
 ![GUI](./figures/RSAtrace3D.jpg)
 
@@ -21,7 +21,7 @@ RSAtrace3D depends on the following packages:
 - scipy
 - scikit-image
 - pandas
-- PyQt5
+- ~~PyQt5~~ -> PySide6
 - pyqtgraph (Version 0.12.2 does not work. Use version <= 0.12.1)
 - psutil
 
@@ -41,9 +41,8 @@ The confirmed operating environments are shown below:
     - numpy (1.22.4)
     - scipy (1.8.1)
     - scikit-image (0.19.2)
-    - pandas (1.4.2)
     - polars (0.15.2)
-    - PyQt5 (5.15.2)
+    - PySide6 (6.4.2)
     - pyqtgraph (0.13.1)
     - psutil (5.9.1)
 
@@ -131,3 +130,5 @@ https://rootomics.dna.affrc.go.jp/en/
   * fix: bug (February 9, 2023)
 * version 1.10 (February 10, 2023)
   * update: support for multi roots.
+* version 1.11 (February 22, 2023)
+  * change: PyQt5 to PySide6

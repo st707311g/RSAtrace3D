@@ -8,10 +8,9 @@ import polars as pl
 from config.history import History
 from GUI.components import QtMain
 from modules.volume import VolumeSaver
-from PyQt5.QtCore import QObject
-from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import (
-    QAction,
+from PySide6.QtCore import QObject
+from PySide6.QtGui import QAction, QColor
+from PySide6.QtWidgets import (
     QColorDialog,
     QFileDialog,
     QMenu,

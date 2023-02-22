@@ -1,6 +1,6 @@
 import config
 from DATA import ID_Object, RSA_Vector
-from PyQt5.QtGui import QFont, QStandardItem
+from PySide6.QtGui import QFont, QStandardItem
 
 
 class RootTraitBackbone(object):
@@ -47,12 +47,14 @@ class RootTraitBackbone(object):
     def check(cls):
         if cls.version < 0 or cls.version > config.version:
             raise Exception(
-                f"The RSAtrace version should be >= {cls.version}. (class name: {cls.__name__})"
+                f"The RSAtrace version should be >= {cls.version}. "
+                "(class name: {cls.__name__})"
             )
-        if cls.built_in == False:
+        if cls.built_in is False:
             if cls.index < 0 or cls.index > 255:
                 raise Exception(
-                    f'The "index" should be >= 0 and <= 255. (class name: {cls.__name__})'
+                    'The "index" should be >= 0 and <= 255.'
+                    f"(class name: {cls.__name__})"
                 )
 
 
@@ -98,10 +100,12 @@ class RSATraitBackbone(object):
     def check(cls):
         if cls.version < 0 or cls.version > config.version:
             raise Exception(
-                f"The RSAtrace version should be >= {cls.version}. (class name: {cls.__name__})"
+                f"The RSAtrace version should be >= {cls.version}. "
+                f"(class name: {cls.__name__})"
             )
-        if cls.built_in == False:
+        if cls.built_in is False:
             if cls.index < 0 or cls.index > 255:
                 raise Exception(
-                    f'The "index" should be >= 0 and <= 255. (class name: {cls.__name__})'
+                    'The "index" should be >= 0 and <= 255. '
+                    f"(class name: {cls.__name__})"
                 )
