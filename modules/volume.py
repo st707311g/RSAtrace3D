@@ -109,8 +109,9 @@ class VolumeSaver(object):
             yield i, len(self.np_volume)
 
         # // saving volume infomartion data
-        with open(
-            Path(dst_path, self.volume_info_file_name),
-            "w",
-        ) as f:
-            json.dump(self.volume3d.information_dict, f)
+        if len(self.volume_info):
+            with open(
+                Path(dst_path, self.volume_info_file_name),
+                "w",
+            ) as f:
+                json.dump(self.volume_info, f)
