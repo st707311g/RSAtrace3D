@@ -1,9 +1,9 @@
 # RSAtrace3D: a root system architecture vectorization software for monocot plants
 
-![python](https://img.shields.io/badge/Python->3.8-lightgreen)
+![python](https://img.shields.io/badge/Python->3.10-lightgreen)
 ![developed_by](https://img.shields.io/badge/developed%20by-Shota_Teramoto-lightgreen)
-![version](https://img.shields.io/badge/version-1.11-lightgreen)
-![last_updated](https://img.shields.io/badge/last_update-February_22,_2023-lightgreen)
+![version](https://img.shields.io/badge/version-1.12-lightgreen)
+![last_updated](https://img.shields.io/badge/last_update-April_28,_2023-lightgreen)
 
 ![GUI](./figures/RSAtrace3D.jpg)
 
@@ -17,13 +17,15 @@ A mouse and keyboard are required for the operation. Windows and Linux are recom
 
 RSAtrace3D depends on the following packages:
 
-- numpy
-- scipy
-- scikit-image
-- pandas
-- ~~PyQt5~~ -> PySide6
-- pyqtgraph (Version 0.12.2 does not work. Use version <= 0.12.1)
-- psutil
+- PySide6==6.4.3 (6.5.0 doesnt work)
+- pyqtgraph==0.13.3
+- polars==0.17.9
+- scikit-image==0.20.0
+- scipy==1.10.1
+- numpy==1.23.5
+- pandas==2.0.1
+- psutil==5.9.5
+- coloredlogs==15.0.1
 
 The following command will install the necessary packages.
 
@@ -34,17 +36,19 @@ pip install -r requirements.txt
 
 The confirmed operating environments are shown below:
 
-- CPU: Intel<sup>(R)</sup> Core<sup>(TM)</sup> i7-8700 CPU @ 3.20 GHz
-- Memory: 32 GB
-- Ubuntu (18.04.4 LTS)
-- Python (3.8.12)
-    - numpy (1.22.4)
-    - scipy (1.8.1)
-    - scikit-image (0.19.2)
-    - polars (0.15.2)
-    - PySide6 (6.4.2)
-    - pyqtgraph (0.13.1)
-    - psutil (5.9.1)
+- CPU: Intel<sup>(R)</sup> Xeon<sup>(R)</sup> W-2295 CPU @ 3.00GHz
+- Memory: 94 GB
+- Ubuntu (20.04)
+- Python (3.10.4)
+    - PySide6==6.4.3 (6.5.0 doesnt work)
+    - pyqtgraph==0.13.3
+    - polars==0.17.9
+    - scikit-image==0.20.0
+    - scipy==1.10.1
+    - numpy==1.23.5
+    - pandas==2.0.1
+    - psutil==5.9.5
+    - coloredlogs==15.0.1
 
 ## installation
 
@@ -132,3 +136,6 @@ https://rootomics.dna.affrc.go.jp/en/
   * update: support for multi roots.
 * version 1.11 (February 22, 2023)
   * change: PyQt5 to PySide6
+* version 1.12 (April 28, 2023)
+  * support: polars latest version (0.17.9)
+  * change: python version to 3.10
