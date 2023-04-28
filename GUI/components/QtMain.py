@@ -477,7 +477,7 @@ class QtMain(QMainWindow):
             else:
                 color = QColor(config.COLOR_ROOT).getRgb()[0:3] + (150,)
 
-            df = df.with_column(pl.Series("color", [color] * len(df)))
+            df = df.with_columns(pl.Series("color", [color] * len(df)))
             modified_df_dict.update({ID_string: df})
 
         self.df_dict_for_drawing.clear()

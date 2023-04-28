@@ -27,9 +27,9 @@ def get_dilate_df(df: pl.DataFrame, target_np_volume: np.ndarray):
 
             offset_df_subset = (
                 df.filter(pl.col("size") >= target_size)
-                .with_column(pl.col("z") + offset_z)
-                .with_column(pl.col("y") + offset_y)
-                .with_column(pl.col("x") + offset_x)
+                .with_columns(pl.col("z") + offset_z)
+                .with_columns(pl.col("y") + offset_y)
+                .with_columns(pl.col("x") + offset_x)
             )
 
             resulting_df_list.append(offset_df_subset)
