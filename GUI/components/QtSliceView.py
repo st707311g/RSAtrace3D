@@ -288,8 +288,13 @@ class QtSliceView(ImageView):
             selected_ID_string=selected_ID_string
         )
 
-    def update_volume(self, volume):
+    def set_volume(self, volume):
         self.setImage(img=volume, axes={"t": 0, "x": 2, "y": 1, "c": None})
+
+    def update_volume(self, np_vol: np.ndarray):
+        self.image = np_vol
+        self.imageDisp = None
+        self.updateImage()
 
     def clear(self):
         super().clear()

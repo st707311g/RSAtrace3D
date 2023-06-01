@@ -310,6 +310,18 @@ class QtProjectionView(QWidget):
             (0, self.volume_shape[0])
         )
 
+    def update_volume(self, volume: np.ndarray):
+        if volume is None:
+            return
+
+        for i in range(3):
+            self.sub_view_widgets[i].set_projection_image(
+                img=volume.max(axis=i)
+            )
+
+        self.update_selected_items()
+        self.update_main_widget()
+
     def set_view_layer(self, df_dict_for_drawing: Dict[str, pl.DataFrame]):
         if len(df_dict_for_drawing) == 0:
             for i, dimension in enumerate([[1, 2], [0, 2], [0, 1]]):

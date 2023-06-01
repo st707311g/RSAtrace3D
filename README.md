@@ -2,8 +2,8 @@
 
 ![python](https://img.shields.io/badge/Python->3.10-lightgreen)
 ![developed_by](https://img.shields.io/badge/developed%20by-Shota_Teramoto-lightgreen)
-![version](https://img.shields.io/badge/version-1.12-lightgreen)
-![last_updated](https://img.shields.io/badge/last_update-April_28,_2023-lightgreen)
+![version](https://img.shields.io/badge/version-1.13-lightgreen)
+![last_updated](https://img.shields.io/badge/last_update-June_1,_2023-lightgreen)
 
 ![GUI](./figures/RSAtrace3D.jpg)
 
@@ -139,3 +139,5 @@ https://rootomics.dna.affrc.go.jp/en/
 * version 1.12 (April 28, 2023)
   * support: polars latest version (0.17.9)
   * change: python version to 3.10
+* version 1.13 (June 1, 2023)
+  * support: multi CT images

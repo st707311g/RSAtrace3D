@@ -221,13 +221,13 @@ class QtMenubar(QMenuBar):
         if directory == "":
             return False
 
-        self.main_window.load_from(volume_path=directory)
+        self.main_window.load_from(vol_parent_path=directory)
 
     def on_menu_history(self):
         obj = QObject.sender(self)
         name = obj.data()
 
-        self.main_window.load_from(volume_path=name)
+        self.main_window.load_from(vol_parent_path=name)
 
     def on_act_close_volume(self):
         self.main_window.close_volume()
