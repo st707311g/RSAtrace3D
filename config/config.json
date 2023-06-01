@@ -1,4 +1,7 @@
 {
    "resolution": 0.3,
-   "interpolation": "COG tracking"
+   "interpolation": "COG tracking",
+   "root color": "#00aa00",
+   "selected root color": "#ffff00",
+   "projection intensity": 0.6
 }

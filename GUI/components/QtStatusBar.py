@@ -1,11 +1,11 @@
 import psutil
-from DATA import RSA_Components
-from PyQt5.QtCore import QObject, QThread, QTimer, pyqtSignal
-from PyQt5.QtWidgets import QLabel, QProgressBar, QSizePolicy, QStatusBar
+from DATA.RSA import RSA_Components
+from PySide6.QtCore import QObject, QThread, QTimer, Signal
+from PySide6.QtWidgets import QLabel, QProgressBar, QSizePolicy, QStatusBar
 
 
 class QtStatusBarW(QObject):
-    pyqtSignal_update_progressbar = pyqtSignal(int, int, str)
+    pyqtSignal_update_progressbar = Signal(int, int, str)
 
     def __init__(self, parent):
         super().__init__()
@@ -65,7 +65,7 @@ class QtStatusBar(QStatusBar):
         self.progress.setMaximum(maximum)
         self.progress.setValue(i)
 
-        self.set_main_message(f"{msg}: {i} / {maximum}")
+        self.set_main_message(f"{msg}")
 
     def set_main_message(self, msg):
         if self.parent().is_control_locked():

@@ -1,11 +1,12 @@
 import logging
 
 import pandas as pd
-from DATA import ID_Object, RSA_Components
+from DATA.RSA import RSA_Components
 from DATA.RSA.components.rinfo import ID_Object
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QAbstractItemView, QStandardItemModel
-from PyQt5.QtWidgets import QHeaderView, QTreeView
+from GUI.components import QtMain
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QStandardItemModel
+from PySide6.QtWidgets import QAbstractItemView, QHeaderView, QTreeView
 
 
 class TreeViewHeader(QHeaderView):
@@ -86,9 +87,9 @@ class TreeModel(QStandardItemModel):
 
 
 class QtTreeView(QTreeView):
-    pyqtSignal_selected_item_changed = pyqtSignal(object)
+    pyqtSignal_selected_item_changed = Signal(object)
 
-    def __init__(self, parent):
+    def __init__(self, parent: QtMain):
         super().__init__(**{"parent": parent})
         self.logger = logging.getLogger(self.__class__.__name__)
         self.__parent = parent
@@ -104,7 +105,7 @@ class QtTreeView(QTreeView):
             item = self.model.horizontalHeaderItem(ci)
             try:
                 item.setToolTip(cls_.tool_tip)
-            except:
+            except:  # noqa
                 pass
 
         self.setModel(self.model)
@@ -300,10 +301,8 @@ class QtTreeView(QTreeView):
         self.logger.debug(f"The selected item changed: {ID_string}")
 
         if not self.parent().is_control_locked():
-            self.GUI_components().sliceview.pos_marks.draw(ID_string=ID_string)
-            self.GUI_components().sliceview.isocurve.draw(ID_string=ID_string)
-            self.GUI_components().projectionview.on_selected_item_changed(
-                ID_string=ID_string
+            self.__parent.on_selected_item_changed(
+                selected_ID_string=ID_string
             )
             self.GUI_components().sliceview.move_position(ID_string=ID_string)
 
@@ -313,7 +312,7 @@ class QtTreeView(QTreeView):
 
         exportable_list = self.root_traits.class_container.expotable_list()
         for ci in range(self.model.columnCount()):
-            if exportable_list[ci] == False:
+            if exportable_list[ci] is False:
                 continue
 
             label = self.model.horizontalHeaderItem(ci).text()

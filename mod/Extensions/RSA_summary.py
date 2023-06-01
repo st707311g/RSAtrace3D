@@ -4,10 +4,9 @@ from typing import List
 import pandas as pd
 from DATA import RinfoFiles, RSA_Vector
 from GUI import QtMain
-from PyQt5.QtCore import QObject, Qt, QThread, pyqtSignal
-from PyQt5.QtGui import QStandardItemModel
-from PyQt5.QtWidgets import (
-    QAction,
+from PySide6.QtCore import QObject, Qt, QThread, Signal
+from PySide6.QtGui import QAction, QStandardItemModel
+from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
     QHeaderView,
@@ -50,6 +49,10 @@ class RSA_summary_window(QMainWindow, ExtensionBackbone):
         self.menubar.update()
 
         self.show_default_msg_in_statusbar()
+
+    def destroy_instance(self):
+        self.statusbar.thread.quit()
+        self.statusbar.thread.wait()
 
     def parent(self):
         return self.__parent
@@ -112,7 +115,7 @@ class RSA_summary_window(QMainWindow, ExtensionBackbone):
         rinfo_files = RinfoFiles(files=files).list_files()
 
         if len(rinfo_files) == 0:
-            self.logger().error(f"There is no .rinfo files.")
+            self.logger().error("There is no .rinfo files.")
             return
 
         self.set_control(locked=True)
@@ -166,7 +169,7 @@ class SummaryTableview(QTableView):
             item = self.model.horizontalHeaderItem(ci)
             try:
                 item.setToolTip(cls_.tool_tip)
-            except:
+            except:  # NOQA
                 pass
 
         self.setModel(self.model)
@@ -183,7 +186,7 @@ class SummaryTableview(QTableView):
 
         try:
             self.parent().menubar.update()
-        except:
+        except:  # NOQA
             pass
         return super().selectionChanged(selected, deselected)
 
@@ -194,7 +197,7 @@ class SummaryTableview(QTableView):
 
         exportable_list = self.RSA_traits().class_container.expotable_list()
         for ci in range(self.model.columnCount()):
-            if exportable_list[ci] == False:
+            if exportable_list[ci] is False:
                 continue
 
             label = self.model.horizontalHeaderItem(ci).text()
@@ -226,7 +229,7 @@ class SummaryTableview(QTableView):
 
 
 class QtStatusBarW(QObject):
-    pyqtSignal_update_progressbar = pyqtSignal(int, int, str)
+    pyqtSignal_update_progressbar = Signal(int, int, str)
 
     def __init__(self, parent):
         super().__init__()
@@ -346,7 +349,7 @@ class QtMenubar(QMenuBar):
     def update(self):
         for m, item in self.__dict__.items():
             if m.lower().startswith(("act_", "menu_")):
-                item.setEnabled(self.parent().is_control_locked() == False)
+                item.setEnabled(self.parent().is_control_locked() is False)
 
         if self.parent().is_control_locked():
             return
@@ -400,7 +403,7 @@ class QtMenubar(QMenuBar):
                     df.to_csv(f)
 
                 self.logger().info(f"[Saving succeeded] {csv_fname}")
-            except:
+            except:  # NOQA
                 self.logger().error(f"[Saving failed] {csv_fname}")
 
 

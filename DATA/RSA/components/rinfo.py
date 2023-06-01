@@ -31,7 +31,8 @@ class ID_Object(str):
     def __new__(cls, key: Union[str, list, tuple]):
         def __raise_exception():
             raise Exception(
-                "The arguments must be a list or tuple of length 3, three numbers, or a string in ID_Object format."
+                "The arguments must be a list or tuple of length 3, "
+                "three numbers, or a string in ID_Object format."
             )
 
         if isinstance(key, str):
@@ -391,10 +392,7 @@ class RSA_Vector(Node):
         self.annotations = _Annotations()
 
     def append(self, annotations={}, baseID=None):
-        if len(self) != 0:
-            raise Exception("Number of base should be 1.")
-
-        baseID = baseID or 1
+        baseID = baseID or self.next_id()
         node = BaseNode(baseID, parent=self, annotations=annotations)
         super().append(node)
         return ID_Object(node.annotations["ID_string"])
@@ -547,7 +545,7 @@ class RSA_Vector(Node):
 
             self.logger.info(f"[Loading succeeded] {file}")
             return True
-        except:
+        except:  # noqa: E722
             self.logger.error(f"[Format error] {file}")
             return False
 
@@ -566,7 +564,7 @@ class RSA_Vector(Node):
                 json.dump(self.dictionary(), j, cls=encoder)
             self.logger.info(f"[Saving succeeded] {rinfo_file_name}")
             return True
-        except:
+        except:  # noqa: E722
             self.logger.error(f"[Saving failed] {rinfo_file_name}")
             return False
 

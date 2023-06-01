@@ -1,15 +1,24 @@
+from __future__ import annotations
+
+from typing import Dict, List
+
+import config
 import numpy as np
-from DATA import ID_Object, RSA_Components
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QGridLayout, QWidget
-from pyqtgraph import ImageItem, InfiniteLine, ViewBox, mkColor
-from pyqtgraph.widgets.GraphicsLayoutWidget import GraphicsLayoutWidget
+import polars as pl
+from GUI.components import QtMain
+from PySide6.QtCore import QObject, QPoint, QPointF, Qt, Signal
+from PySide6.QtGui import QAction, QActionGroup
+from PySide6.QtWidgets import QGridLayout, QMenu, QWidget
+
+if True:
+    from pyqtgraph import ImageItem, InfiniteLine, ViewBox, mkColor
+    from pyqtgraph.widgets.GraphicsLayoutWidget import GraphicsLayoutWidget
 
 
 class CoreViewBox(ViewBox):
-    pyqtSignal_mouseClickEvent = pyqtSignal(int, object, int, bool)
+    pyqtSignal_mouseClickEvent = Signal(int, object, object, bool)
 
-    def __init__(self, identifier, **kwargs):
+    def __init__(self, identifier: int, **kwargs):
         super().__init__(**kwargs)
         self.identifier = identifier
 
@@ -18,27 +27,24 @@ class CoreViewBox(ViewBox):
 
         self.projection_image = ImageItem()
         self.trace_image = ImageItem()
-        self.selected_trace_image = ImageItem()
         self.addItem(self.projection_image)
         self.addItem(self.trace_image)
-        self.addItem(self.selected_trace_image)
 
         self.setBackgroundColor(mkColor("#000000"))
 
     def clear_all(self):
         self.projection_image.clear()
         self.trace_image.clear()
-        self.selected_trace_image.clear()
 
     def is_empty(self):
         return self.projection_image.image is None
 
-    def mouseClickEvent(self, ev):
+    def mouseClickEvent(self, ev: mouseClickEvent):
         self.pyqtSignal_mouseClickEvent.emit(
             self.identifier,
             self.mapToView(ev.pos()),
             ev.button(),
-            self.projection_image.image is not None,
+            not self.is_empty(),
         )
 
 
@@ -53,7 +59,7 @@ class SubViewBox(CoreViewBox):
 
 
 class CoreViewWidget(GraphicsLayoutWidget):
-    def __init__(self, identifier, dimension):
+    def __init__(self, identifier: int, dimension: List[int]):
         super().__init__()
         self.identifier = identifier
         self.dimension = dimension
@@ -63,15 +69,18 @@ class CoreViewWidget(GraphicsLayoutWidget):
 
     def set_projection_image(self, img):
         self.view.projection_image.setImage(img.transpose(1, 0))
+        self.on_projection_level_changed()
         self.view.autoRange()
+
+    def on_projection_level_changed(self):
+        self.view.projection_image.setLevels(
+            (0, 255 // config.PROJECTION_INTENSITY)
+        )
 
     def set_trace_image(self, img):
         img = None if img is None else img.transpose(1, 0, 2)
         self.view.trace_image.setImage(img)
         self.setBackground(self.bg_color)
-
-    def set_selected_trace_image(self, img):
-        self.view.selected_trace_image.setImage(img.transpose(1, 0, 2))
 
     def clear_all(self):
         self.view.clear_all()
@@ -82,9 +91,42 @@ class CoreViewWidget(GraphicsLayoutWidget):
 
 
 class MainViewWidget(CoreViewWidget):
-    def __init__(self, **kwargs):
+    def __init__(self, parent: QtProjectionView, **kwargs):
         super().__init__(**kwargs)
+        self.__parent = parent
         self.make_viewbox()
+
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.build_context_menu)
+
+    def build_context_menu(self, point: QPoint):
+        if self.__parent.main_window.is_control_locked():
+            return
+        menu = QMenu(self)
+
+        act_group = QActionGroup(menu)
+        act_group.setExclusive(True)
+
+        for i in range(1, 6):
+            action = QAction(
+                f"{i/5:.0%}", self, triggered=self.on_act_projection_intensity
+            )
+            action.setData(i / 5)
+            action.setCheckable(True)
+            action.setActionGroup(act_group)
+            action.setChecked(i / 5 == config.PROJECTION_INTENSITY)
+            menu.addAction(action)
+
+        menu.exec_(self.mapToGlobal(point))
+
+    def on_act_projection_intensity(self):
+        obj = QObject.sender(self)
+        projection_intensity = float(obj.data())
+
+        config.PROJECTION_INTENSITY = projection_intensity
+
+        for w in self.__parent.all_widgets:
+            w.on_projection_level_changed()
 
     def make_viewbox(self):
         self.view = MainViewBox(identifier=self.identifier)
@@ -105,14 +147,16 @@ class SubViewWidget(CoreViewWidget):
 
 
 class QtProjectionView(QWidget):
-    def __init__(self, parent):
+    def __init__(self, parent: QtMain):
         super().__init__(**{"parent": parent})
         self.__parent = parent
         self.layout = QGridLayout()
-        self.main_view_widget = MainViewWidget(identifier=-1, dimension=None)
+        self.main_view_widget = MainViewWidget(
+            parent=self, identifier=-1, dimension=None
+        )
         self.layout.addWidget(self.main_view_widget, 0, 0, 3, 1)
 
-        self.sub_view_widgets = []
+        self.sub_view_widgets: List[SubViewWidget] = []
         for i, dimension in enumerate([[1, 2], [0, 2], [0, 1]]):
             self.sub_view_widgets.append(
                 SubViewWidget(identifier=i, dimension=dimension)
@@ -128,27 +172,41 @@ class QtProjectionView(QWidget):
         self.setLayout(self.layout)
 
         self.current_view_index = -1
-        self.dimensions = ((1, 2), (0, 2), (0, 1))
-        self.selected_ID_string = None
 
-        for w in self.all_widgets():
+        for w in self.all_widgets:
             w.view.pyqtSignal_mouseClickEvent.connect(self.on_mouse_clicked)
 
         self.main_view_widget.infinite_line.sigDragged.connect(
             self.on_infinite_line_pos_changed
         )
 
-    def all_widgets(self):
-        return [self.main_view_widget] + self.sub_view_widgets
-
-    def parent(self):
+    @property
+    def main_window(self):
         return self.__parent
 
-    def RSA_components(self) -> RSA_Components:
-        return self.parent().RSA_components()
+    @property
+    def RSA_components(self):
+        return self.main_window.RSA_components()
 
+    @property
+    def RSA_vector(self):
+        return self.RSA_components.vector
+
+    @property
     def GUI_components(self):
-        return self.parent().GUI_components()
+        return self.main_window.GUI_components()
+
+    @property
+    def treeview(self):
+        return self.GUI_components.treeview
+
+    @property
+    def sliceview(self):
+        return self.GUI_components.sliceview
+
+    @property
+    def all_widgets(self):
+        return [self.main_view_widget] + self.sub_view_widgets
 
     def update_selected_items(self):
         self.main_view_widget.select_itself(flag=False)
@@ -172,12 +230,6 @@ class QtProjectionView(QWidget):
         if img is not None:
             self.main_view_widget.set_trace_image(img=img.transpose(1, 0, 2))
 
-        # // update selected_trace
-        img = view.selected_trace_image.image
-        if img is not None:
-            self.main_view_widget.set_selected_trace_image(
-                img=img.transpose(1, 0, 2)
-            )
         if self.current_view_index != 0:
             self.main_view_widget.infinite_line.show()
         else:
@@ -185,25 +237,31 @@ class QtProjectionView(QWidget):
 
         self.main_view_widget.view.autoRange()
 
-    def on_mouse_clicked(self, identifier, coordinate, button, is_valid):
+    def on_mouse_clicked(
+        self,
+        identifier: int,
+        coordinate: QPointF,
+        button: Qt.MouseButton,
+        is_valid: bool,
+    ):
         if is_valid is False or button != Qt.LeftButton:
             return
 
         if identifier == -1:
             ID_string_list = []
             distance_list = []
-            for ID_string in self.RSA_components().vector.iter_all():
+            for ID_string in self.RSA_vector.iter_all():
                 if not ID_string.is_root():
                     continue
-                root_node = self.RSA_components().vector.root_node(
-                    ID_string=ID_string
-                )
+                root_node = self.RSA_vector.root_node(ID_string=ID_string)
                 if root_node is not None:
                     distance = self.__get_closest_distance(
                         ref_coordinate=np.array(
                             [int(coordinate.y()), int(coordinate.x())]
                         ),
-                        from_polyline=root_node.completed_polyline(),
+                        from_polyline=np.asarray(
+                            root_node.completed_polyline()
+                        ),
                         index=self.current_view_index,
                     )
                     ID_string_list.append(ID_string)
@@ -219,7 +277,7 @@ class QtProjectionView(QWidget):
             if distance_min > 20**2:
                 return
 
-            self.GUI_components().treeview.select(ID_string=ID_string_min)
+            self.treeview.select(ID_string=ID_string_min)
 
         if identifier in [0, 1, 2]:
             self.current_view_index = identifier
@@ -234,7 +292,7 @@ class QtProjectionView(QWidget):
             self.sub_view_widgets[i].clear_all()
         self.main_view_widget.infinite_line.hide()
 
-    def set_volume(self, volume):
+    def set_volume(self, volume: np.ndarray):
         if volume is None:
             return
 
@@ -252,48 +310,76 @@ class QtProjectionView(QWidget):
             (0, self.volume_shape[0])
         )
 
-    def set_trace(self, projections):
+    def update_volume(self, volume: np.ndarray):
+        if volume is None:
+            return
+
         for i in range(3):
-            img = None if len(projections) != 3 else projections[i].volume
-            self.sub_view_widgets[i].set_trace_image(img=img)
+            self.sub_view_widgets[i].set_projection_image(
+                img=volume.max(axis=i)
+            )
+
+        self.update_selected_items()
+        self.update_main_widget()
+
+    def set_view_layer(self, df_dict_for_drawing: Dict[str, pl.DataFrame]):
+        if len(df_dict_for_drawing) == 0:
+            for i, dimension in enumerate([[1, 2], [0, 2], [0, 1]]):
+                sub_view_widget = self.sub_view_widgets[i]
+                projection_image = sub_view_widget.view.projection_image.image
+                if projection_image is None:
+                    continue
+                else:
+                    np_layer = np.zeros(
+                        projection_image.shape + (4,), dtype=np.uint8
+                    )
+                    sub_view_widget.set_trace_image(img=np_layer)
+
+            self.update_main_widget()
+            return
+
+        df_list_for_drawing = [v for k, v in df_dict_for_drawing.items()]
+        df_for_drawing = pl.concat(df_list_for_drawing)
+
+        z_array = df_for_drawing["z"].to_numpy()
+        y_array = df_for_drawing["y"].to_numpy()
+        x_array = df_for_drawing["x"].to_numpy()
+        array_list = [z_array, y_array, x_array]
+        color_array = np.array(df_for_drawing["color"].to_list())
+
+        for i, dimension in enumerate([[1, 2], [0, 2], [0, 1]]):
+            sub_view_widget = self.sub_view_widgets[i]
+            projection_image = sub_view_widget.view.projection_image.image
+            if projection_image is None:
+                continue
+
+            shape = (projection_image.shape[1], projection_image.shape[0], 4)
+
+            np_layer = np.zeros(shape, dtype=np.uint8)
+            if len(df_list_for_drawing) == 0:
+                self.sub_view_widgets[i].set_trace_image(img=np_layer)
+                continue
+
+            if len(z_array) != 0:
+                np_layer[
+                    array_list[dimension[0]], array_list[dimension[1]]
+                ] = color_array
+
+            self.sub_view_widgets[i].set_trace_image(img=np_layer)
 
         self.update_main_widget()
 
-    def __get_closest_distance(self, ref_coordinate, from_polyline, index):
+    def __get_closest_distance(
+        self, ref_coordinate: np.ndarray, from_polyline: np.ndarray, index: int
+    ):
         from_polyline = np.array(from_polyline).T
         np_polyline = np.delete(np.array(from_polyline), index, axis=0)
         distance = ((np_polyline.T - ref_coordinate) ** 2).sum(axis=1).min()
         return distance
 
-    def on_selected_item_changed(self, ID_string: ID_Object):
-        if self.current_view_index not in [0, 1, 2] or ID_string is None:
-            return
-
-        if ID_string.is_base():
-            for w in self.all_widgets():
-                w.view.selected_trace_image.hide()
-            return
-
-        for w in self.all_widgets():
-            w.view.selected_trace_image.show()
-
-        for w in self.sub_view_widgets:
-            RSA_vector = self.RSA_components().vector
-            selected_trace = self.RSA_components().trace.create_trace_object(
-                RSA_vector=RSA_vector,
-                ID_string=ID_string,
-                shape=self.volume_shape,
-                dimensions=w.dimension,
-            )
-
-            if selected_trace is not None:
-                w.set_selected_trace_image(img=selected_trace.volume)
-
-        self.update_main_widget()
-
-    def on_spacekey_pressed(self, pressed):
-        for w in self.all_widgets():
-            if pressed == True:
+    def on_spacekey_pressed(self, pressed: bool):
+        for w in self.all_widgets:
+            if pressed is True:
                 w.view.trace_image.hide()
             else:
                 w.view.trace_image.show()
@@ -304,5 +390,4 @@ class QtProjectionView(QWidget):
 
     def on_infinite_line_pos_changed(self, infinite_line: InfiniteLine):
         z_pos = int(infinite_line.pos().y())
-        self.GUI_components().sliceview.timeLine.setPos(z_pos)
-        # print(z_pos)
+        self.sliceview.timeLine.setPos(z_pos)

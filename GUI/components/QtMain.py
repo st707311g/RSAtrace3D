@@ -1,16 +1,22 @@
 import json
 import logging
 import os
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Dict
 
 import config
-from DATA import File, RSA_Components
+import numpy as np
+import polars as pl
+from DATA.RSA import RSA_Components
+from DATA.RSA.components.file import File
+from DATA.RSA.components.rinfo import ID_Object, RootNode
+from data_modules.df_for_drawing import get_dilate_df
 from mod import Extensions, Interpolation, RootTraits, RSATraits
-from PyQt5.QtCore import QEvent, Qt, QThread
-from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QSplitter
-from st_modules.volume import VolumeLoader
+from modules.volume import VolumeLoader
+from PySide6.QtCore import QEvent, Qt, QThread, Signal
+from PySide6.QtGui import QColor, QKeyEvent
+from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QSplitter
+from skimage import io
 
 from .QtMenubar import QtMenubar
 from .QtProjectionView import QtProjectionView
@@ -43,6 +49,7 @@ class QtMain(QMainWindow):
         self.root_traits = RootTraits()
         self.RSA_traits = RSATraits()
         self.extensions = Extensions(parent=self)
+        self.df_dict_for_drawing: Dict[str, pl.DataFrame] = {}
         self.__RSA_components = RSA_Components(parent=self)
         self.__GUI_components = GUI_Components(parent=self)
         self.setStatusBar(self.GUI_components().statusbar.widget)
@@ -57,18 +64,18 @@ class QtMain(QMainWindow):
         # // splitter setting
         self.main_splitter = QSplitter(Qt.Horizontal)
         self.sub_splitter = QSplitter(Qt.Vertical)
-        self.sub_splitter.addWidget(self.GUI_components().treeview)
-        self.sub_splitter.addWidget(self.GUI_components().projectionview)
-        self.main_splitter.addWidget(self.GUI_components().sliceview)
+        self.sub_splitter.addWidget(self.treeview)
+        self.sub_splitter.addWidget(self.projectionview)
+        self.main_splitter.addWidget(self.sliceview)
         self.main_splitter.addWidget(self.sub_splitter)
         self.main_splitter.setSizes([1024, 1024])
         self.sub_splitter.setSizes([1024, 1024])
         self.setCentralWidget(self.main_splitter)
 
-        self.GUI_components().menubar.build()
-        self.setMenuBar(self.GUI_components().menubar)
+        self.menubar.build()
+        self.setMenuBar(self.menubar)
         self.addToolBar(self.GUI_components().toolbar)
-        self.GUI_components().menubar.update()
+        self.menubar.update()
 
         self.show_default_msg_in_statusbar()
         self.load_config()
@@ -96,6 +103,30 @@ class QtMain(QMainWindow):
     def RSA_components(self):
         return self.__RSA_components
 
+    @property
+    def RSA_vector(self):
+        return self.RSA_components().vector
+
+    @property
+    def treeview(self):
+        return self.GUI_components().treeview
+
+    @property
+    def selected_ID_string(self):
+        return self.treeview.get_selected_ID_string()
+
+    @property
+    def projectionview(self):
+        return self.GUI_components().projectionview
+
+    @property
+    def sliceview(self):
+        return self.GUI_components().sliceview
+
+    @property
+    def menubar(self):
+        return self.GUI_components().menubar
+
     def is_control_locked(self):
         return self.__control_locked
 
@@ -105,7 +136,7 @@ class QtMain(QMainWindow):
 
         self.__control_locked = locked
         self.logger.debug(f"Control locked: {self.__control_locked}")
-        self.GUI_components().menubar.update()
+        self.menubar.update()
 
         if locked:
             QApplication.setOverrideCursor(Qt.WaitCursor)
@@ -119,148 +150,151 @@ class QtMain(QMainWindow):
         self.__spacekey_pressed = pressed
         self.logger.debug(f"Space key pressed: {self.__spacekey_pressed}")
         for w in [
-            self.GUI_components().sliceview,
-            self.GUI_components().projectionview,
+            self.sliceview,
+            self.projectionview,
         ]:
             w.on_spacekey_pressed(pressed=self.__spacekey_pressed)
 
     def dragEnterEvent(self, ev):
         ev.accept()
 
-    def dropEvent(self, ev):
+    def dropEvent(self, ev) -> bool:
         ev.accept()
 
         flist = [u.toLocalFile() for u in ev.mimeData().urls()]
 
         if len(flist) != 1:
             self.logger.error("Only 1 volume path at once is acceptable.")
-            return
-
-        volume_path: str = flist[0]
-
-        if os.path.isdir(flist[0]):
-            self.load_from(volume_path=volume_path)
-        elif os.path.isfile(volume_path) and volume_path.lower().endswith(
-            ".tar.gz"
-        ):
-            self.load_from(volume_path=volume_path)
-        else:
-            self.logger.error(f"{volume_path} is not loadable.")
-
-        return
-
-    def load_from(self, volume_path: str, rinfo_dict: dict = {}):
-        self.set_control(locked=True)
-        self.volume_loader = QtVolumeLoader(
-            volume_path=volume_path,
-            progressbar_signal=self.GUI_components().statusbar.pyqtSignal_update_progressbar,
-        )
-
-        if not self.volume_loader.is_valid_volume():
-            self.logger.error(f"[Loading error] {volume_path}")
-            self.set_control(locked=False)
             return False
 
-        VolumeFile = File(volume_path=volume_path)
+        vol_parent_path = Path(flist[0])
+        if not vol_parent_path.is_dir():
+            self.logger.error("Indicate directory path.")
+            return False
+
+        return self.load_from(vol_parent_path)
+
+    def load_from(self, vol_parent_path: Path, rinfo_dict: dict = {}):
+        self.set_control(locked=True)
+        statusbar = self.GUI_components().statusbar
+
+        vl = VolumeLoader(vol_parent_path)
+        vol_paths: list[Path] = []
+        if vl.is_valid_volume():
+            vol_paths = [vol_parent_path]
+        else:
+            vol_paths: list[Path] = []
+            for d in sorted(os.listdir(vol_parent_path)):
+                d = Path(vol_parent_path, d)
+                vl = VolumeLoader(d)
+                if vl.is_valid_volume():
+                    vol_paths.append(d)
+
+        if len(vol_paths) == 0:
+            self.logger.error("No volume directories.")
+            return False
+
+        self.volume_loader = QtVolumeLoader(
+            volume_paths=vol_paths,
+            progressbar_signal=statusbar.pyqtSignal_update_progressbar,
+        )
+
+        VolumeFile = File(volume_path=str(vol_parent_path))
         self.rinfo_dict = rinfo_dict
         self.close_volume()
         self.RSA_components().file = VolumeFile
 
         self.volume_loader.finished.connect(self.on_volume_loaded)
         self.volume_loader.start()
-        self.GUI_components().menubar.history.add(volume_path)
-        self.GUI_components().menubar.history.update_menu()
+        self.menubar.history.add(str(vol_parent_path))
+        self.menubar.history.update_menu()
 
     def on_volume_loaded(self):
         file_instance = self.RSA_components().file
         self.set_volume_name(file_instance.volume_name)
 
-        volume3d = self.volume_loader.data()
-        self.set_resolution(volume3d.mm_resolution)
-
-        volume = volume3d.np_volume
+        np_vols, vol_infos, labels = self.volume_loader.data()
+        self.set_resolution(vol_infos[0].get("mm_resolution", 0.3))
         del self.volume_loader
 
         self.logger.info(
             f"[Loading succeeded] {self.RSA_components().file.volume_path}"
         )
 
-        self.RSA_components().volume.init_from_volume(volume=volume)
-        self.RSA_components().trace.init_from_volume(volume=volume)
-        self.GUI_components().sliceview.update_volume(volume=volume)
-        self.GUI_components().projectionview.set_volume(volume=volume)
-
-        trace3D = self.RSA_components().trace.trace3D
-        if trace3D is not None:
-            self.GUI_components().sliceview.update_trace3D(trace3D)
+        self.RSA_components().set_volumes(
+            np_vols=np_vols,
+            labels=labels,
+        )
+        self.sliceview.set_volume(volume=np_vols[0])
+        self.projectionview.set_volume(volume=np_vols[0])
 
         loaded = False
         if self.rinfo_dict:
             loaded = self.load_rinfo_from_dict(self.rinfo_dict)
         elif self.RSA_components().file.is_rinfo_file_available():
-            ret = QMessageBox.information(
-                None,
-                "Information",
-                "The rinfo file is available. Do you want to import this?",
-                QMessageBox.Yes,
-                QMessageBox.No,
-            )
-            if ret == QMessageBox.Yes:
+            if config.ALWAYS_YES:
+                replay = True
+            else:
+                ret = QMessageBox.information(
+                    None,
+                    "Information",
+                    "The rinfo file is available. Do you want to import this?",
+                    QMessageBox.Yes,
+                    QMessageBox.No,
+                )
+                replay = ret == QMessageBox.Yes
+            if replay:
                 loaded = self.load_rinfo(
                     fname=self.RSA_components().file.rinfo_file
                 )
                 self.set_volume_name(
-                    volume_name=self.RSA_components().vector.annotations.volume_name()
+                    volume_name=self.RSA_vector.annotations.volume_name()
                 )
                 self.set_resolution(
-                    resolution=self.RSA_components().vector.annotations.resolution()
+                    resolution=self.RSA_vector.annotations.resolution()
                 )
 
-        if loaded == False:
+        if loaded is False:
             self.set_volume_name(
-                volume_name=self.RSA_components().file.volume_path
+                volume_name=self.RSA_components().file.volume_name
             )
 
-            interpolation = self.RSA_components().vector.interpolation
-            self.RSA_components().vector.annotations.set_interpolation(
+            interpolation = self.RSA_vector.interpolation
+            self.RSA_vector.annotations.set_interpolation(
                 interpolation.get_selected_label()
             )
-            self.RSA_components().vector.annotations.set_volume_shape(
-                volume.shape
-            )
+            self.RSA_vector.annotations.set_volume_shape(np_vols[0].shape)
 
         self.set_control(locked=False)
-        selected_ID_string = (
-            self.GUI_components().treeview.get_selected_ID_string()
-        )
-        if selected_ID_string is not None:
-            self.GUI_components().projectionview.on_selected_item_changed(
-                ID_string=selected_ID_string
-            )
 
         self.show_default_msg_in_statusbar()
         self.setWindowTitle()
-        self.GUI_components().menubar.update()
+        self.menubar.update()
 
     def load_rinfo_from_dict(self, rinfo_dict: dict, file: str = ""):
-        RSA_vector = self.RSA_components().vector
-        treeview = self.GUI_components().treeview
-        ret = RSA_vector.load_from_dict(rinfo_dict, file=file)
-        if ret == False:
+        ret = self.RSA_vector.load_from_dict(rinfo_dict, file=file)
+        if ret is False:
             return False
 
-        for ID_string in RSA_vector.iter_all():
+        for ID_string in self.RSA_vector.iter_all():
             if ID_string.is_base():
-                treeview.add_base(ID_string=ID_string)
+                self.treeview.add_base(ID_string=ID_string)
             elif ID_string.is_root():
-                treeview.add_root(ID_string=ID_string)
+                self.treeview.add_root(ID_string=ID_string)
             else:
-                treeview.add_relay(ID_string=ID_string)
+                self.treeview.add_relay(ID_string=ID_string)
 
-        self.set_volume_name(volume_name=RSA_vector.annotations.volume_name())
-        self.set_resolution(resolution=RSA_vector.annotations.resolution())
+        self.set_volume_name(
+            volume_name=self.RSA_vector.annotations.volume_name()
+        )
+        self.set_resolution(
+            resolution=self.RSA_vector.annotations.resolution()
+        )
 
-        self.GUI_components().sliceview.update_trace_graphics()
+        self.update_df_dict_for_drawing_all()
+        self.on_selected_item_changed(
+            selected_ID_string=self.selected_ID_string
+        )
 
         return True
 
@@ -270,62 +304,81 @@ class QtMain(QMainWindow):
 
         return self.load_rinfo_from_dict(trace_dict, file=fname)
 
-    # // key press event
-    def keyPressEvent(self, ev):
+    def keyPressEvent(self, ev: QKeyEvent):
         ev.accept()
         if self.is_control_locked():
             return
 
         if ev.key() == Qt.Key_Space and not ev.isAutoRepeat():
             self.set_spacekey(pressed=True)
+            return
 
         if ev.key() == Qt.Key_Delete and not ev.isAutoRepeat():
-            selected_ID_string = (
-                self.GUI_components().treeview.get_selected_ID_string()
-            )
-            if selected_ID_string is None:
+            if self.selected_ID_string is None:
                 return
 
             # // choose ID_string that should be deleted
             target_node = None
-            if selected_ID_string.is_base():
-                target_node = self.RSA_components().vector.base_node(
-                    ID_string=selected_ID_string
+            if self.selected_ID_string.is_base():
+                target_node = self.RSA_vector.base_node(
+                    ID_string=self.selected_ID_string
                 )
-            elif selected_ID_string.is_root():
-                target_node = self.RSA_components().vector.root_node(
-                    ID_string=selected_ID_string
+            elif self.selected_ID_string.is_root():
+                target_node = self.RSA_vector.root_node(
+                    ID_string=self.selected_ID_string
                 )
-            else:
-                root_node = self.RSA_components().vector.root_node(
-                    ID_string=selected_ID_string
+            elif self.selected_ID_string.is_relay():
+                target_node = self.RSA_vector.root_node(
+                    ID_string=self.selected_ID_string
                 )
-                if root_node is not None:
-                    if root_node.child_count() > 1:
-                        target_node = self.RSA_components().vector.relay_node(
-                            ID_string=selected_ID_string
-                        )
-                    else:
-                        target_node = self.RSA_components().vector.root_node(
-                            ID_string=selected_ID_string
+                if target_node is not None:
+                    if target_node.child_count() > 1:
+                        target_node = self.RSA_vector.relay_node(
+                            ID_string=self.selected_ID_string
                         )
 
             if target_node is not None:
+                self.set_control(True)
                 ID_string = target_node.ID_string()
-                self.GUI_components().treeview.select(ID_string=ID_string)
+                self.treeview.select(ID_string=ID_string)
                 target_node.delete()
-                self.GUI_components().treeview.delete(ID_string=ID_string)
-                self.GUI_components().sliceview.update_trace_graphics()
+                self.treeview.delete(ID_string=ID_string)
+                if ID_string.is_base():
+                    self.update_df_dict_for_drawing_all()
+                elif ID_string.is_root():
+                    del self.df_dict_for_drawing[ID_string]
+                else:
+                    self.update_df_dict_for_drawing(
+                        target_ID_string=ID_string.to_root()
+                    )
+
+                self.on_selected_item_changed(
+                    selected_ID_string=self.selected_ID_string
+                )
+                self.set_control(False)
 
         return
 
-    # // key release event
     def keyReleaseEvent(self, ev):
         ev.accept()
         if self.is_control_locked():
             return
 
+        if (
+            ev.key() == Qt.Key_Tab
+            and not ev.isAutoRepeat()
+            and ev.modifiers() & Qt.ControlModifier
+        ):
+            self.logger.debug("[key released] Ctrl+Tab")
+            if not self.RSA_components().volume.is_empty():
+                self.RSA_components().shift_current_volume()
+                self.sliceview.update_volume(self.RSA_components().volume.data)
+                self.projectionview.update_volume(
+                    self.RSA_components().volume.data
+                )
+
         if ev.key() == Qt.Key_Space and not ev.isAutoRepeat():
+            self.logger.debug("[key release] Space")
             self.set_spacekey(pressed=False)
 
     # // event hook
@@ -344,19 +397,27 @@ class QtMain(QMainWindow):
             return super().event(ev)
 
     def closeEvent(self, *args, **kwargs):
-        self.GUI_components().menubar.history.save("recent.json")
+        self.menubar.history.save("recent.json")
         self.save_config()
+
+        self.extensions.destroy_instance()
+
+        self.GUI_components().statusbar.thread.quit()
+        self.GUI_components().statusbar.thread.wait()
+
         super().closeEvent(*args, **kwargs)
 
     def close_volume(self):
         if self.RSA_components().volume.is_empty():
             return
 
+        self.df_dict_for_drawing.clear()
+        self.sliceview.update_slice_layer()
         self.RSA_components().clear()
-        self.GUI_components().sliceview.clear()
-        self.GUI_components().treeview.clear()
-        self.GUI_components().menubar.update()
-        self.GUI_components().projectionview.clear()
+        self.sliceview.clear()
+        self.treeview.clear()
+        self.menubar.update()
+        self.projectionview.clear()
 
         self.show_default_msg_in_statusbar()
         self.setWindowTitle()
@@ -370,15 +431,11 @@ class QtMain(QMainWindow):
 
     def set_volume_name(self, volume_name):
         self.GUI_components().toolbar.volumename_edit.setText(str(volume_name))
-        self.RSA_components().vector.annotations.set_volume_name(
-            name=volume_name
-        )
+        self.RSA_vector.annotations.set_volume_name(name=volume_name)
 
     def set_resolution(self, resolution):
         self.GUI_components().toolbar.voxel_lineedit.setText(str(resolution))
-        self.RSA_components().vector.annotations.set_resolution(
-            resolution=resolution
-        )
+        self.RSA_vector.annotations.set_resolution(resolution=resolution)
 
     def setWindowTitle(self):
         text = f"RSAtrace3D (version {config.version_string()})"
@@ -387,18 +444,130 @@ class QtMain(QMainWindow):
             text = f"{text} - {volume_path}"
         super().setWindowTitle(text)
 
+    def update_df_dict_for_drawing_all(self):
+        self.df_dict_for_drawing.clear()
+        for base_node in self.RSA_vector:
+            for root_node in base_node:
+                self.update_df_dict_for_drawing(
+                    target_ID_string=root_node.ID_string()
+                )
 
-@dataclass
-class QtVolumeLoader(QThread, VolumeLoader):
-    def __init__(self, volume_path: str, progressbar_signal):
-        super().__init__(volume_path=volume_path)
+    def update_df_dict_for_drawing(self, target_ID_string: ID_Object):
+        target_node = self.RSA_vector[target_ID_string]
+
+        if isinstance(target_node, RootNode):
+            polyline = np.array(target_node.completed_polyline())
+
+            z_array = polyline[:, 0]
+            y_array = polyline[:, 1]
+            x_array = polyline[:, 2]
+            size = 3
+            color = QColor("#8800ff00").getRgb()
+            df = pl.DataFrame(
+                (
+                    pl.Series("z", z_array, dtype=pl.Int64),
+                    pl.Series("y", y_array, dtype=pl.Int64),
+                    pl.Series("x", x_array, dtype=pl.Int64),
+                    pl.Series("size", [size] * len(x_array), dtype=pl.Int64),
+                    pl.Series(
+                        "color", [color] * len(x_array), dtype=pl.Object
+                    ),
+                )
+            )
+            df = get_dilate_df(df, self.RSA_components().volume.data)
+            self.df_dict_for_drawing.update({target_ID_string: df})
+            self.logger.debug(
+                f"df_dict_for_drawing was updated: {target_ID_string}"
+            )
+
+    def on_selected_item_changed(self, selected_ID_string: ID_Object):
+        self.logger.debug(f"selected item changed: {selected_ID_string}")
+
+        modified_df_dict = {}
+        for ID_string, df in self.df_dict_for_drawing.items():
+            ID_string = ID_Object(ID_string)
+            if ID_string.baseID() != selected_ID_string.baseID():
+                color = QColor(config.COLOR_SELECTED_ROOT).getRgb()[0:3] + (
+                    40,
+                )
+            elif (
+                not selected_ID_string.is_base()
+                and ID_string == selected_ID_string.to_root()
+            ):
+                color = QColor(config.COLOR_SELECTED_ROOT).getRgb()[0:3] + (
+                    150,
+                )
+            else:
+                color = QColor(config.COLOR_ROOT).getRgb()[0:3] + (150,)
+
+            df = df.with_columns(pl.Series("color", [color] * len(df)))
+            modified_df_dict.update({ID_string: df})
+
+        self.df_dict_for_drawing.clear()
+        self.df_dict_for_drawing.update(modified_df_dict)
+
+        self.sliceview.update_slice_layer()
+
+        self.projectionview.set_view_layer(self.df_dict_for_drawing)
+        self.sliceview.pos_marks.draw(ID_string=selected_ID_string)
+
+        if selected_ID_string is not None:
+            if selected_ID_string.is_base():
+                projection_image = None
+            else:
+                selected_ID_string = selected_ID_string.to_root()
+                np_volume = self.RSA_components().volume.data
+                projection_image = np.zeros(
+                    shape=(np_volume.shape[1], np_volume.shape[2]),
+                    dtype=np.uint8,
+                )
+                df_for_drawing = self.df_dict_for_drawing[selected_ID_string]
+                y_array = df_for_drawing["y"].to_numpy()
+                x_array = df_for_drawing["x"].to_numpy()
+
+                if len(y_array) != 0:
+                    projection_image[y_array, x_array] = 255
+
+            # if selected_ID_string is not None:
+            self.sliceview.isocurve.draw(projection_image=projection_image)
+
+
+class QtVolumeLoader(QThread):
+    def __init__(self, volume_paths: list[Path], progressbar_signal: Signal):
+        super().__init__()
+        self.volume_paths = volume_paths.copy()
         self.progressbar_signal = progressbar_signal
 
-    def run(self):
-        for i, total in self.load_files_iterably():
-            self.progressbar_signal.emit(i, total, "File loading")
+    @property
+    def volume_number(self):
+        return len(self.volume_paths)
 
+    def run(self):
+        self.__np_volume: list[np.ndarray] = []
+        self.__volume_info: list[dict] = []
+        self.__labels: list[str] = []
+        for i, volume_path in enumerate(self.volume_paths):
+            volume_path = Path(volume_path)
+            vl = VolumeLoader(volume_path)
+            img_paths = vl.image_files
+
+            imgs = []
+            for j, p in enumerate(img_paths):
+                imgs.append(io.imread(p))
+                self.progressbar_signal.emit(
+                    i * len(img_paths) + j + 1,
+                    len(img_paths) * self.volume_number,
+                    f"[loading] {volume_path.name} ({j+1} / {len(img_paths)})",
+                )
+
+            self.__np_volume.append(np.asarray(imgs))
+            self.__volume_info.append(vl.load_volume_info())
+            self.__labels.append(str(volume_path.name))
         self.quit()
 
+    def is_valid_volume(self):
+        vl = VolumeLoader(self.volume_path)
+        return vl.is_valid_volume()
+
     def data(self):
-        return self.get()
+        return (self.__np_volume, self.__volume_info, self.__labels)

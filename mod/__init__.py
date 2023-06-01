@@ -5,7 +5,8 @@ import sys
 from importlib import import_module
 from inspect import getmembers, isclass
 
-from PyQt5.QtWidgets import QAction, QActionGroup, QMenu
+from PySide6.QtGui import QAction, QActionGroup
+from PySide6.QtWidgets import QMenu
 
 if __name__ == "__main__":
     sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
@@ -64,7 +65,6 @@ class _ClassLoader(object):
                 m_path, _ = os.path.splitext(f)
                 m_path = m_path.replace("/", ".").replace("\\", ".")
                 module = import_module(m_path, self.__module__)
-
                 class_list = list(
                     getmembers(
                         module,
@@ -76,7 +76,7 @@ class _ClassLoader(object):
                 for _, class_instance in class_list:
                     if class_instance != self.backbone:
                         self.class_container.append(class_instance)
-            except:
+            except:  # noqa
                 self.logger.error(
                     f"An unexpected error occurred while importing the module: {f}"
                 )
@@ -112,7 +112,7 @@ class _ClassLoader(object):
 
             try:
                 act.setStatusTip(cls_.status_tip)
-            except:
+            except:  # noqa
                 pass
 
             self.menu.addAction(act)
@@ -159,6 +159,11 @@ class Extensions(_ClassLoader):
 
         for c in self.class_container:
             self.windows.update({c.label: c(parent=self.parent())})
+
+    def destroy_instance(self):
+        for k, w in self.windows.items():
+            if hasattr(w, "destroy_instance"):
+                w.destroy_instance()
 
     def parent(self):
         return self.__parent
