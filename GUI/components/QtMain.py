@@ -158,66 +158,75 @@ class QtMain(QMainWindow):
     def dragEnterEvent(self, ev):
         ev.accept()
 
-    def dropEvent(self, ev):
+    def dropEvent(self, ev) -> bool:
         ev.accept()
 
         flist = [u.toLocalFile() for u in ev.mimeData().urls()]
 
         if len(flist) != 1:
             self.logger.error("Only 1 volume path at once is acceptable.")
-            return
+            return False
 
-        volume_path = Path(flist[0])
+        vol_parent_path = Path(flist[0])
+        if not vol_parent_path.is_dir():
+            self.logger.error("Indicate directory path.")
+            return False
 
-        if os.path.isdir(flist[0]):
-            self.load_from(volume_path=volume_path)
-        elif os.path.isfile(volume_path) and volume_path.lower().endswith(
-            ".tar.gz"
-        ):
-            self.load_from(volume_path=volume_path)
-        else:
-            self.logger.error(f"{volume_path} is not loadable.")
+        return self.load_from(vol_parent_path)
 
-        return
-
-    def load_from(self, volume_path: Path, rinfo_dict: dict = {}):
+    def load_from(self, vol_parent_path: Path, rinfo_dict: dict = {}):
         self.set_control(locked=True)
         statusbar = self.GUI_components().statusbar
+
+        vl = VolumeLoader(vol_parent_path)
+        vol_paths: list[Path] = []
+        if vl.is_valid_volume():
+            vol_paths = [vol_parent_path]
+        else:
+            vol_paths: list[Path] = []
+            for d in sorted(os.listdir(vol_parent_path)):
+                d = Path(vol_parent_path, d)
+                vl = VolumeLoader(d)
+                if vl.is_valid_volume():
+                    vol_paths.append(d)
+
+        if len(vol_paths) == 0:
+            self.logger.error("No volume directories.")
+            return False
+
         self.volume_loader = QtVolumeLoader(
-            volume_path=volume_path,
+            volume_paths=vol_paths,
             progressbar_signal=statusbar.pyqtSignal_update_progressbar,
         )
 
-        if not self.volume_loader.is_valid_volume():
-            self.logger.error(f"[Loading error] {volume_path}")
-            self.set_control(locked=False)
-            return False
-
-        VolumeFile = File(volume_path=str(volume_path))
+        VolumeFile = File(volume_path=str(vol_parent_path))
         self.rinfo_dict = rinfo_dict
         self.close_volume()
         self.RSA_components().file = VolumeFile
 
         self.volume_loader.finished.connect(self.on_volume_loaded)
         self.volume_loader.start()
-        self.menubar.history.add(str(volume_path))
+        self.menubar.history.add(str(vol_parent_path))
         self.menubar.history.update_menu()
 
     def on_volume_loaded(self):
         file_instance = self.RSA_components().file
         self.set_volume_name(file_instance.volume_name)
 
-        np_volume, volume_info = self.volume_loader.data()
-        self.set_resolution(volume_info.get("mm_resolution", 0.3))
+        np_vols, vol_infos, labels = self.volume_loader.data()
+        self.set_resolution(vol_infos[0].get("mm_resolution", 0.3))
         del self.volume_loader
 
         self.logger.info(
             f"[Loading succeeded] {self.RSA_components().file.volume_path}"
         )
 
-        self.RSA_components().volume.init_from_volume(volume=np_volume)
-        self.sliceview.update_volume(volume=np_volume)
-        self.projectionview.set_volume(volume=np_volume)
+        self.RSA_components().set_volumes(
+            np_vols=np_vols,
+            labels=labels,
+        )
+        self.sliceview.set_volume(volume=np_vols[0])
+        self.projectionview.set_volume(volume=np_vols[0])
 
         loaded = False
         if self.rinfo_dict:
@@ -254,7 +263,7 @@ class QtMain(QMainWindow):
             self.RSA_vector.annotations.set_interpolation(
                 interpolation.get_selected_label()
             )
-            self.RSA_vector.annotations.set_volume_shape(np_volume.shape)
+            self.RSA_vector.annotations.set_volume_shape(np_vols[0].shape)
 
         self.set_control(locked=False)
 
@@ -355,7 +364,21 @@ class QtMain(QMainWindow):
         if self.is_control_locked():
             return
 
+        if (
+            ev.key() == Qt.Key_Tab
+            and not ev.isAutoRepeat()
+            and ev.modifiers() & Qt.ControlModifier
+        ):
+            self.logger.debug("[key released] Ctrl+Tab")
+            if not self.RSA_components().volume.is_empty():
+                self.RSA_components().shift_current_volume()
+                self.sliceview.update_volume(self.RSA_components().volume.data)
+                self.projectionview.update_volume(
+                    self.RSA_components().volume.data
+                )
+
         if ev.key() == Qt.Key_Space and not ev.isAutoRepeat():
+            self.logger.debug("[key release] Space")
             self.set_spacekey(pressed=False)
 
     # // event hook
@@ -510,22 +533,35 @@ class QtMain(QMainWindow):
 
 
 class QtVolumeLoader(QThread):
-    def __init__(self, volume_path: Path, progressbar_signal: Signal):
+    def __init__(self, volume_paths: list[Path], progressbar_signal: Signal):
         super().__init__()
-        self.volume_path = volume_path
+        self.volume_paths = volume_paths.copy()
         self.progressbar_signal = progressbar_signal
 
+    @property
+    def volume_number(self):
+        return len(self.volume_paths)
+
     def run(self):
-        vl = VolumeLoader(self.volume_path)
-        img_paths = vl.image_files
+        self.__np_volume: list[np.ndarray] = []
+        self.__volume_info: list[dict] = []
+        self.__labels: list[str] = []
+        for i, volume_path in enumerate(self.volume_paths):
+            vl = VolumeLoader(volume_path)
+            img_paths = vl.image_files
 
-        imgs = []
-        for i, p in enumerate(img_paths):
-            imgs.append(io.imread(p))
-            self.progressbar_signal.emit(i + 1, len(img_paths), "File loading")
+            imgs = []
+            for j, p in enumerate(img_paths):
+                imgs.append(io.imread(p))
+                self.progressbar_signal.emit(
+                    i * len(img_paths) + j + 1,
+                    len(img_paths) * self.volume_number,
+                    f"[loading] {volume_path.name} ({j+1} / {len(img_paths)})",
+                )
 
-        self.__np_volume = np.asarray(imgs)
-        self.__volume_info = vl.load_volume_info()
+            self.__np_volume.append(np.asarray(imgs))
+            self.__volume_info.append(vl.load_volume_info())
+            self.__labels.append(str(volume_path.name))
         self.quit()
 
     def is_valid_volume(self):
@@ -533,4 +569,4 @@ class QtVolumeLoader(QThread):
         return vl.is_valid_volume()
 
     def data(self):
-        return (self.__np_volume, self.__volume_info)
+        return (self.__np_volume, self.__volume_info, self.__labels)

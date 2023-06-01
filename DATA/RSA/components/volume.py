@@ -11,7 +11,7 @@ class Volume(object):
 
     def clear(self):
         self.data = None
-        self.logger.debug(f"The volume data cleared.")
+        self.logger.debug("The volume data cleared.")
 
     def is_empty(self):
         return self.data is None
@@ -22,7 +22,7 @@ class Volume(object):
 
     def init_from_volume(self, volume):
         self.data = volume
-        self.logger.debug(f"The volume data initialized.")
+        self.logger.debug("The volume data initialized.")
 
     def get_trimmed_volume(self, center, radius):
         if self.data is not None:

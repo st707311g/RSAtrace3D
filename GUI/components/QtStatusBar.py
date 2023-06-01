@@ -65,7 +65,7 @@ class QtStatusBar(QStatusBar):
         self.progress.setMaximum(maximum)
         self.progress.setValue(i)
 
-        self.set_main_message(f"{msg}: {i} / {maximum}")
+        self.set_main_message(f"{msg}")
 
     def set_main_message(self, msg):
         if self.parent().is_control_locked():
