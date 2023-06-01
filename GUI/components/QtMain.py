@@ -547,6 +547,7 @@ class QtVolumeLoader(QThread):
         self.__volume_info: list[dict] = []
         self.__labels: list[str] = []
         for i, volume_path in enumerate(self.volume_paths):
+            volume_path = Path(volume_path)
             vl = VolumeLoader(volume_path)
             img_paths = vl.image_files
 
