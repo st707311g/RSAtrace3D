@@ -1,13 +1,8 @@
 import logging
 import os
 
-import config
 import imageio.v3 as imageio
 import numpy as np
-import polars as pl
-from config.history import History
-from GUI.components import QtMain
-from modules.volume import VolumeSaver
 from PySide6.QtCore import QObject
 from PySide6.QtGui import QAction, QColor
 from PySide6.QtWidgets import (
@@ -17,6 +12,11 @@ from PySide6.QtWidgets import (
     QMenuBar,
     QMessageBox,
 )
+
+import config
+from config.history import History
+from GUI.components import QtMain
+from modules.volume import VolumeSaver
 
 
 class QtAction(QAction):
@@ -277,20 +277,16 @@ class QtMenubar(QMenuBar):
     def on_act_export_trace_images(self):
         np_volume = self.RSA_components.volume.data
         df_dict_for_drawing = self.main_window.df_dict_for_drawing
+        df_list = [v["df"] for v in df_dict_for_drawing.values()]
         trace_object = np.zeros((np_volume.shape[0:3]), dtype=np.uint8)
 
-        df_list_for_drawing = [v for k, v in df_dict_for_drawing.items()]
-        if len(df_list_for_drawing) != 0:
-            df_for_drawing = pl.concat(df_list_for_drawing)
-            z_array = df_for_drawing["z"].to_numpy()
-            y_array = df_for_drawing["y"].to_numpy()
-            x_array = df_for_drawing["x"].to_numpy()
-            color_array = np.array(df_for_drawing["color"].to_list())
-            color_array = color_array[:, 0:3]
-            color_array = (color_array.max(axis=1) != 0) * 255
+        for df in df_list:
+            z_array = df["z"].to_numpy()
+            y_array = df["y"].to_numpy()
+            x_array = df["x"].to_numpy()
 
             if len(z_array) != 0:
-                trace_object[z_array, y_array, x_array] = color_array
+                trace_object[z_array, y_array, x_array] = 255
 
         self.main_window.set_control(locked=True)
         trace_directory = self.RSA_components.file.trace_directory

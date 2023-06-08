@@ -4,7 +4,7 @@ from typing import Final
 
 application_name = "RSAtrace3D"
 version = 1
-revision = 13
+revision = 14
 
 ALWAYS_YES = False
 COLOR_ROOT_DEFAULT: Final[str] = "#00aa00"

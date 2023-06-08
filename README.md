@@ -2,8 +2,8 @@
 
 ![python](https://img.shields.io/badge/Python->3.10-lightgreen)
 ![developed_by](https://img.shields.io/badge/developed%20by-Shota_Teramoto-lightgreen)
-![version](https://img.shields.io/badge/version-1.13-lightgreen)
-![last_updated](https://img.shields.io/badge/last_update-June_1,_2023-lightgreen)
+![version](https://img.shields.io/badge/version-1.14-lightgreen)
+![last_updated](https://img.shields.io/badge/last_update-June_9,_2023-lightgreen)
 
 ![GUI](./figures/RSAtrace3D.jpg)
 
@@ -141,3 +141,5 @@ https://rootomics.dna.affrc.go.jp/en/
   * change: python version to 3.10
 * version 1.13 (June 1, 2023)
   * support: multi CT images
+* version 1.14 (June 9, 2023)
+  * update: drawing speed improved
