@@ -6,12 +6,13 @@ from typing import List
 
 import numpy as np
 import polars as pl
-from DATA.RSA import RSA_Components
-from DATA.RSA.components.rinfo import ID_Object
-from GUI.components import QtMain
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QBrush, QMouseEvent, QPen
 from PySide6.QtWidgets import QGraphicsSceneWheelEvent
+
+from DATA.RSA import RSA_Components
+from DATA.RSA.components.rinfo import ID_Object
+from GUI.components import QtMain
 
 if True:
     from pyqtgraph import (
@@ -329,18 +330,17 @@ class QtSliceView(ImageView):
         df_dict_for_drawing = self.__parent.df_dict_for_drawing
         slice_layer = np.zeros((np_volume.shape[1:3] + (4,)), dtype=np.uint8)
 
-        df_list_for_drawing = [v for k, v in df_dict_for_drawing.items()]
-        if len(df_list_for_drawing) != 0:
-            df_for_drawing = pl.concat(df_list_for_drawing).filter(
-                pl.col("z") == self.currentIndex
-            )
-            z_array = df_for_drawing["z"].to_numpy()
-            y_array = df_for_drawing["y"].to_numpy()
-            x_array = df_for_drawing["x"].to_numpy()
-            color_array = np.array(df_for_drawing["color"].to_list())
+        df_list = [v["df"] for v in df_dict_for_drawing.values()]
+        color_list = [v["color"] for v in df_dict_for_drawing.values()]
+
+        for df, color in zip(df_list, color_list):
+            df = df.filter(pl.col("z") == self.currentIndex)
+            z_array = df["z"].to_numpy()
+            y_array = df["y"].to_numpy()
+            x_array = df["x"].to_numpy()
 
             if len(z_array) != 0:
-                slice_layer[x_array, y_array] = color_array
+                slice_layer[x_array, y_array] = color
 
         self.slice_layer_item.setImage(slice_layer, autoLevels=False)
 

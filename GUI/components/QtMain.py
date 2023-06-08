@@ -2,21 +2,21 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Dict
 
-import config
 import numpy as np
 import polars as pl
+from PySide6.QtCore import QEvent, Qt, QThread, Signal
+from PySide6.QtGui import QColor, QKeyEvent
+from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QSplitter
+from skimage import io
+
+import config
 from DATA.RSA import RSA_Components
 from DATA.RSA.components.file import File
 from DATA.RSA.components.rinfo import ID_Object, RootNode
 from data_modules.df_for_drawing import get_dilate_df
 from mod import Extensions, Interpolation, RootTraits, RSATraits
 from modules.volume import VolumeLoader
-from PySide6.QtCore import QEvent, Qt, QThread, Signal
-from PySide6.QtGui import QColor, QKeyEvent
-from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QSplitter
-from skimage import io
 
 from .QtMenubar import QtMenubar
 from .QtProjectionView import QtProjectionView
@@ -49,7 +49,7 @@ class QtMain(QMainWindow):
         self.root_traits = RootTraits()
         self.RSA_traits = RSATraits()
         self.extensions = Extensions(parent=self)
-        self.df_dict_for_drawing: Dict[str, pl.DataFrame] = {}
+        self.df_dict_for_drawing: dict[str, pl.DataFrame] = {}
         self.__RSA_components = RSA_Components(parent=self)
         self.__GUI_components = GUI_Components(parent=self)
         self.setStatusBar(self.GUI_components().statusbar.widget)
@@ -186,9 +186,10 @@ class QtMain(QMainWindow):
             vol_paths: list[Path] = []
             for d in sorted(os.listdir(vol_parent_path)):
                 d = Path(vol_parent_path, d)
-                vl = VolumeLoader(d)
-                if vl.is_valid_volume():
-                    vol_paths.append(d)
+                if d.is_dir():
+                    vl = VolumeLoader(d)
+                    if vl.is_valid_volume():
+                        vol_paths.append(d)
 
         if len(vol_paths) == 0:
             self.logger.error("No volume directories.")
@@ -344,7 +345,15 @@ class QtMain(QMainWindow):
                 target_node.delete()
                 self.treeview.delete(ID_string=ID_string)
                 if ID_string.is_base():
-                    self.update_df_dict_for_drawing_all()
+                    target_ID_strings = [
+                        ID_Object(k) for k in self.df_dict_for_drawing.keys()
+                    ]
+                    for target_ID_string in target_ID_strings:
+                        if (
+                            ID_Object(target_ID_string).baseID()
+                            == ID_Object(ID_string).baseID()
+                        ):
+                            del self.df_dict_for_drawing[target_ID_string]
                 elif ID_string.is_root():
                     del self.df_dict_for_drawing[ID_string]
                 else:
@@ -469,13 +478,14 @@ class QtMain(QMainWindow):
                     pl.Series("y", y_array, dtype=pl.Int64),
                     pl.Series("x", x_array, dtype=pl.Int64),
                     pl.Series("size", [size] * len(x_array), dtype=pl.Int64),
-                    pl.Series(
-                        "color", [color] * len(x_array), dtype=pl.Object
-                    ),
                 )
             )
+
             df = get_dilate_df(df, self.RSA_components().volume.data)
-            self.df_dict_for_drawing.update({target_ID_string: df})
+
+            self.df_dict_for_drawing.update(
+                {target_ID_string: {"df": df, "color": color}}
+            )
             self.logger.debug(
                 f"df_dict_for_drawing was updated: {target_ID_string}"
             )
@@ -484,7 +494,8 @@ class QtMain(QMainWindow):
         self.logger.debug(f"selected item changed: {selected_ID_string}")
 
         modified_df_dict = {}
-        for ID_string, df in self.df_dict_for_drawing.items():
+        for ID_string, vars in self.df_dict_for_drawing.items():
+            df = vars["df"]
             ID_string = ID_Object(ID_string)
             if ID_string.baseID() != selected_ID_string.baseID():
                 color = QColor(config.COLOR_SELECTED_ROOT).getRgb()[0:3] + (
@@ -500,8 +511,7 @@ class QtMain(QMainWindow):
             else:
                 color = QColor(config.COLOR_ROOT).getRgb()[0:3] + (150,)
 
-            df = df.with_columns(pl.Series("color", [color] * len(df)))
-            modified_df_dict.update({ID_string: df})
+            modified_df_dict.update({ID_string: {"df": df, "color": color}})
 
         self.df_dict_for_drawing.clear()
         self.df_dict_for_drawing.update(modified_df_dict)
@@ -521,7 +531,8 @@ class QtMain(QMainWindow):
                     shape=(np_volume.shape[1], np_volume.shape[2]),
                     dtype=np.uint8,
                 )
-                df_for_drawing = self.df_dict_for_drawing[selected_ID_string]
+                vars = self.df_dict_for_drawing[selected_ID_string]
+                df_for_drawing = vars["df"]
                 y_array = df_for_drawing["y"].to_numpy()
                 x_array = df_for_drawing["x"].to_numpy()
 

@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from typing import Dict, List
-
-import config
 import numpy as np
-import polars as pl
-from GUI.components import QtMain
 from PySide6.QtCore import QObject, QPoint, QPointF, Qt, Signal
 from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtWidgets import QGridLayout, QMenu, QWidget
+
+import config
+from GUI.components import QtMain
 
 if True:
     from pyqtgraph import ImageItem, InfiniteLine, ViewBox, mkColor
@@ -59,7 +57,7 @@ class SubViewBox(CoreViewBox):
 
 
 class CoreViewWidget(GraphicsLayoutWidget):
-    def __init__(self, identifier: int, dimension: List[int]):
+    def __init__(self, identifier: int, dimension: list[int]):
         super().__init__()
         self.identifier = identifier
         self.dimension = dimension
@@ -156,7 +154,7 @@ class QtProjectionView(QWidget):
         )
         self.layout.addWidget(self.main_view_widget, 0, 0, 3, 1)
 
-        self.sub_view_widgets: List[SubViewWidget] = []
+        self.sub_view_widgets: list[SubViewWidget] = []
         for i, dimension in enumerate([[1, 2], [0, 2], [0, 1]]):
             self.sub_view_widgets.append(
                 SubViewWidget(identifier=i, dimension=dimension)
@@ -322,7 +320,7 @@ class QtProjectionView(QWidget):
         self.update_selected_items()
         self.update_main_widget()
 
-    def set_view_layer(self, df_dict_for_drawing: Dict[str, pl.DataFrame]):
+    def set_view_layer(self, df_dict_for_drawing: dict[str, dict]):
         if len(df_dict_for_drawing) == 0:
             for i, dimension in enumerate([[1, 2], [0, 2], [0, 1]]):
                 sub_view_widget = self.sub_view_widgets[i]
@@ -338,14 +336,8 @@ class QtProjectionView(QWidget):
             self.update_main_widget()
             return
 
-        df_list_for_drawing = [v for k, v in df_dict_for_drawing.items()]
-        df_for_drawing = pl.concat(df_list_for_drawing)
-
-        z_array = df_for_drawing["z"].to_numpy()
-        y_array = df_for_drawing["y"].to_numpy()
-        x_array = df_for_drawing["x"].to_numpy()
-        array_list = [z_array, y_array, x_array]
-        color_array = np.array(df_for_drawing["color"].to_list())
+        df_list = [v["df"] for v in df_dict_for_drawing.values()]
+        color_list = [v["color"] for v in df_dict_for_drawing.values()]
 
         for i, dimension in enumerate([[1, 2], [0, 2], [0, 1]]):
             sub_view_widget = self.sub_view_widgets[i]
@@ -356,14 +348,15 @@ class QtProjectionView(QWidget):
             shape = (projection_image.shape[1], projection_image.shape[0], 4)
 
             np_layer = np.zeros(shape, dtype=np.uint8)
-            if len(df_list_for_drawing) == 0:
-                self.sub_view_widgets[i].set_trace_image(img=np_layer)
-                continue
+            for df, color in zip(df_list, color_list):
+                z_array = df["z"].to_numpy()
+                y_array = df["y"].to_numpy()
+                x_array = df["x"].to_numpy()
+                array_list = [z_array, y_array, x_array]
 
-            if len(z_array) != 0:
                 np_layer[
                     array_list[dimension[0]], array_list[dimension[1]]
-                ] = color_array
+                ] = color
 
             self.sub_view_widgets[i].set_trace_image(img=np_layer)
 

@@ -4,8 +4,9 @@ import logging
 import os
 from typing import Generator, Iterator, List, Union
 
-import config
 import numpy as np
+
+import config
 
 
 class RinfoFiles(object):
